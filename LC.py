@@ -1,82 +1,74 @@
+# ============================================================================================
+# Função EquiliBrium_LC
+# Portada para Python por João Maria em 26/4/2018
+# ============================================================================================
 import numpy as np
 from LMC import LMC
 from Dinprime import Dinprime
 from Expenditure import Expenditure
 from PH import PH
 
-# ============================================================================================
-# Função EquiliBrium_LC
-# Portada para Python por João Maria em 26/4/2018
-# ============================================================================================
 
-def equilibrium_LC(tau_hat, taup, alphas, mLinearThetas, mThetas, B, G, Din, J, N, nMaxIteracions, nTolerance,
-                   VAn, Sn, vfactor, LG, VA_Br, beta, Pos, t, w_aux, wbr_aux, Csi, Csi_teste, iota):
-    # initialize vectors of ex-post wage and price factors
-    # wf0 = np.ones([N, 1])
-    # pf0 = np.ones([J, N])
-    # wfmax = np.array([1.0])
+def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareVA, mIO, Din, nSectors, nCountries,
+                   nMaxIteracions, nTolerance, VAn, Sn, vfactor, LG, VA_Br, nBeta, nPositionBR, nActualYear,
+                   w_aux, wbr_aux, mCsiBrasil, Csi_teste, mIota):
+    mWages = w_aux[:, nActualYear].reshape(nCountries, 1)
+    mWagesBrasil = wbr_aux[:, nActualYear].reshape(nSectors, 1)
+    mPriceFactor = np.ones([nSectors, nCountries], dtype=float)
+    PQ = 1000 * np.ones([nCountries, nSectors], dtype=float)
 
-    wf0 = w_aux[:, t].reshape(N, 1)
-    wbr0 = wbr_aux[:, t].reshape(J, 1)
-    pf0 = np.ones([J, N], dtype=float)
-    PQ = 1000 * np.ones([N, J], dtype=float)
+    nInterations = 1
+    wfmax = 1.0
 
-    e = 1.0
-    wfmax = 1
+    while (nInterations <=nMaxIteracions) and (wfmax > nTolerance):
 
-    while (e <=nMaxIteracions) and (wfmax > nTolerance):
-
-        pf0, c = PH(wf0, tau_hat, mLinearThetas, mThetas, B, G, Din, J, N, nMaxIteracions, nTolerance,
-                    wbr0, Pos, pf0, LG, Csi)
+        mPriceFactor, mCost = PH(mWages, mTauHat, mLinearThetas, mThetas, mShareVA, mIO, Din, nSectors, nCountries,
+                                 nMaxIteracions, nTolerance, mWagesBrasil, nPositionBR, mPriceFactor, LG, mCsiBrasil)
 
         # Calculating trade shares
-        Dinp = Dinprime(Din, tau_hat, c, mLinearThetas, mThetas, J, N)
-        Dinp_om = Dinp / taup
+        mTradeShare = Dinprime(Din, mTauHat, mCost, mLinearThetas, mThetas, nSectors, nCountries)
+        mTradeShareOM = mTradeShare / mTauActual
 
-        Fp = np.zeros([J, N], dtype=float)
-        for j in range(J):
-            Fp[j, :] = sum((Dinp[j * N: (j + 1) * N: 1, :] / taup[j * N: (j + 1) * N: 1, :]).T)
+        mWeightedTariffs = np.zeros([nSectors, nCountries], dtype=float)
+        for j in range(nSectors):
+            mWeightedTariffs[j, :] = sum((mTradeShare[j * nCountries: (j + 1) * nCountries: 1, :] / mTauActual[j * nCountries: (j + 1) * nCountries: 1, :]).T)
 
         # Expenditure matrix
-
-        PQ = Expenditure(alphas, B, G, Dinp, taup, Fp, VAn, wf0, Sn, J, N, LG, VA_Br, wbr0, Pos, PQ)
-
+        PQ = Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
+                         LG, VA_Br, mWagesBrasil, nPositionBR, PQ)
         # Iterating using LMC
-        wf1, w_Br = LMC(PQ, Dinp_om, J, N, B, VAn, VA_Br, Pos, LG)
-
+        mWagesAux, mWagesBrasilAux = LMC(PQ, mTradeShareOM, nSectors, nCountries, mShareVA, VAn, VA_Br, nPositionBR, LG)
         # Excess function
-        # ZW = (wf1.reshape(N,1) - wf0.reshape(N,1))
-        # ZW_T = sum(abs(wf0 - wf1));
-        # ZW_Br = sum(abs(wbr0 - w_Br))
-
-
-        ZW = (w_Br - wbr0)
-        PQ_vec = PQ.T.reshape(J * N, 1, order='F').copy()
-        DP = np.zeros([J * N, N], dtype=float)
-        for n in range(N):
-            DP[:, n] = Dinp_om[:, n] * PQ_vec [:, 0]
+        # ZW = (mWagesAux.reshape(N,1) - mWages.reshape(N,1))
+        # ZW_T = sum(abs(mWages - mWagesAux));
+        # ZW_Br = sum(abs(mWagesBrasil - mWagesBrasilAux))
+        ZW = (mWagesBrasilAux - mWagesBrasil)
+        PQ_vec = PQ.T.reshape(nSectors * nCountries, 1, order='F').copy()
+        DP = np.zeros([nSectors * nCountries, nCountries], dtype=float)
+        for n in range(nCountries):
+            DP[:, n] = mTradeShareOM[:, n] * PQ_vec [:, 0]
 
         # Exports
-        LHS = sum(DP).reshape(N, 1)
+        LHS = sum(DP).reshape(nCountries, 1)
 
         # calculating RHS (Imports) trade balance
-        PF = PQ * Fp
+        PF = PQ * mWeightedTariffs
         # Imports
-        RHS = sum(PF).reshape(N, 1)
+        RHS = sum(PF).reshape(nCountries, 1)
 
         Sn_pos = -(RHS - LHS)
 
-        xbilattau = (PQ_vec * np.ones([1, N], dtype=float)) * Dinp_om
-        GO = np.ones([J, N], dtype=float)
-        for j in range(J):
-            GO[j, :] = sum(xbilattau[j * N: (j + 1) * N, :])
+        xbilattau = (PQ_vec * np.ones([1, nCountries], dtype=float)) * mTradeShareOM
+        GO = np.ones([nSectors, nCountries], dtype=float)
+        for j in range(nSectors):
+            GO[j, :] = sum(xbilattau[j * nCountries: (j + 1) * nCountries, :])
 
-        VAjn_pos = GO * B
+        VAjn_pos = GO * mShareVA
         Cap_pos = VAjn_pos * Csi_teste
-        rem_cap_pos = sum(Cap_pos).reshape(N, 1)
+        rem_cap_pos = sum(Cap_pos).reshape(nCountries, 1)
         Qui_pos = sum(rem_cap_pos)
         iota_pos = (rem_cap_pos - Sn) / Qui_pos
-        ZW2 = iota_pos - iota
+        ZW2 = iota_pos - mIota
 
         # Excess function (trade balance)
 
@@ -84,17 +76,12 @@ def equilibrium_LC(tau_hat, taup, alphas, mLinearThetas, mThetas, B, G, Din, J, 
         ZW2 = -(RHS - LHS + Sn) / VAn
 
         # Itaration factor prices
-        wf1 = wf0 * (1 - vfactor * ZW2 / wf0)
+        mWagesAux = mWages * (1 - vfactor * ZW2 / mWages)
+        mWagesBrasilTemp = mWagesBrasil * (1 - vfactor * ZW / mWagesBrasil)
 
-        wbr1 = wbr0 * (1 - vfactor * ZW / wbr0)
-
-     #   Excesso = sum(abs(wbr0 - wbr1))
-
-     #   wfmax = sum(abs(wf1 - wf0))
         wfmax = sum(abs(ZW2))
+        mWages = mWagesAux
+        mWagesBrasil = mWagesBrasilTemp
+        nInterations += 1
 
-        wf0 = wf1
-        wbr0 = wbr1
-
-        e += 1
-    return wf0, pf0, PQ, Fp, Dinp, ZW, Snp, c, DP, PF, wbr0
+    return mWages, mPriceFactor, PQ, mWeightedTariffs, mTradeShare, ZW, Snp, mCost, DP, PF, mWagesBrasil

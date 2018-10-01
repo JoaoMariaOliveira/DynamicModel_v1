@@ -1,6 +1,6 @@
 import numpy as np
 
-def Dinprime(Din, tau_hat, c, mLinearThetas, mThetas, nSectors, nCountries):
+def Dinprime(Din, mTauHat, mCost, mLinearThetas, mThetas, nSectors, nCountries):
 
     # reformatting theta vector
 #    mLinearThetas = np.ones([nSectors * nCountries,1], dtype=float)
@@ -8,11 +8,11 @@ def Dinprime(Din, tau_hat, c, mLinearThetas, mThetas, nSectors, nCountries):
 #        for n in range(nCountries):
 #            mLinearThetas[j * nCountries + n, :] = mThetas[j]
 
-    cp = np.ones(c.shape)
+    cp = np.ones(mCost.shape)
     for n in range(nCountries):
-        cp[:, n] = c[:, n] ** (-1 / mThetas.reshape(1, nSectors))
+        cp[:, n] = mCost[:, n] ** (-1 / mThetas.reshape(1, nSectors))
 
-    Din_om = Din * (tau_hat ** (-1 / (mLinearThetas * np.ones([1, nCountries]))))
+    Din_om = Din * (mTauHat ** (-1 / (mLinearThetas * np.ones([1, nCountries]))))
 
     DD = np.zeros([nSectors * nCountries, nCountries], dtype=float)
 

@@ -1,11 +1,10 @@
 # ============================================================================================
-# Modulo de controle do modelo dim^,mico crido por Messa
-# portado para Python por João Maria de Oliveira - baseado no trabalho de Bernardo
+# Main Module of Dynamic Computable General Equilibrium Model
+# portado para Python por João Maria de Oliveira -
 # Modelo original de cAliendo e Parro (2017)
 # ============================================================================================
-#    PENDENCIAS
 import numpy as np
-import SupportFunctions as FuncoesApoio
+import SupportFunctions as Support
 from Controle import Equilibrium
 import sys
 # ============================================================================================
@@ -26,19 +25,19 @@ sDirectoryOutput = './OutputCenario1FormulaSuica/'
 # nExecuta = 1 trata dados (modelo já está rodado)
 # posição 0 de nExecuta é para o modelo sem choque
 # posição 1 de nExecuta é para o modelo com choque
-nExecuta = [0, 0]
+nExecute = [0, 0]
 # nStart = 0 roda modelo  com Y inicial matriz de 1
 # nStart = 1 roda modelo lendo Y inicial a partir de dados salvos anteriormente
 # posição 0 de nStart é para o modelo sem choque
 # posição 1 de nStart é para o modelo com choque
 nStart = [0, 0]
 # parâmetros iniciais
-vfactor = -0.1
+nFactor = -0.1
 # valor de tolerância para convergência
 #nTolerance = 1E-08
-nTolerance = 1E-08
+nTolerance = 1E-04
 # Número máximo de iterações
-nMaxIter = 400000000
+nMaxIteration = 400000000
 nAdjust = 1
 #
 # Inputs
@@ -51,95 +50,97 @@ nCountries = 27
 M = 27
 # Years T
 nYears = 20
-# Sectors + unemployment
-D = nSectors+1
+# Sectors with unemployment
+nSectorsLabor = nSectors+1
 # posição do Brasil
-Pos = 0
-
+nPositionBR = 0
 # ============================================================================================
 # controle de chamada do CGE
-# nChoque = 0 - roda sem choque
-# nChoque = 1 - roda com choque
-for nChoque in range(2):
+# nCenario = 0 - roda sem choque
+# nCenario = 1 - roda com choque
+#
+#
+for nCenario in range(2):
     # geração de valores iniciais
-    if nStart [nChoque] == 0:
-        Y1 = np.ones([nYears, D], dtype=float)
+    if nStart [nCenario] == 0:
+        Y1 = np.ones([nYears, nSectorsLabor], dtype=float)
         w_aux = np.ones([nCountries, nYears], dtype=float)
         p_aux = np.ones([nYears * nSectors, nCountries], dtype=float)
         wbr_aux = np.ones([nSectors, nYears], dtype=float)
 
-        if nChoque == 0:
+        if nCenario == 0:
             lDataToSave = ['Y1', 'w_aux', 'wbr_aux']
         else:
             lDataToSave = ['Y1_C', 'w_aux_C', 'wbr_aux_C']
 
         lData = [Y1, w_aux, wbr_aux]
-        FuncoesApoio.write_data_csv(lDataToSave, lData, sDirectoryOutput )
+        Support.write_data_csv(lDataToSave, lData, sDirectoryOutput)
     else:
-        if nChoque == 0:
-            Y1 = FuncoesApoio.read_file_csv('Y1',sDirectoryOutput)
-            Y1_ant = FuncoesApoio.read_file_csv('Y1_ant', sDirectoryOutput)
+        if nCenario == 0:
+            Y1 = Support.read_file_csv('Y1', sDirectoryOutput)
+            Y1_ant = Support.read_file_csv('Y1_ant', sDirectoryOutput)
         else:
-            Y1 = FuncoesApoio.read_file_csv('Y1_C', sDirectoryOutput)
-            Y1_ant = FuncoesApoio.read_file_csv('Y1_ant_C', sDirectoryOutput)
+            Y1 = Support.read_file_csv('Y1_C', sDirectoryOutput)
+            Y1_ant = Support.read_file_csv('Y1_ant_C', sDirectoryOutput)
 
         Y2 = Y1_ant - 1 * (Y1_ant - Y1)
         Y1 = Y2
 
-    Yinic = Y1
+    mInitialY = Y1
 
     # Valores de calibragem
-    beta = .9
+    nBeta = .9
     # valor intertemporal
-    v = 8.47
-# ============================================================================================
-# read follows data of Brazil in txt files:
-# L         - labor Vector stock by GTAP sector + unemployment ( 0 pos)
-# migracao  - migracao Matrix by GTAP sector + unemployment
-# Csi       - Csi Matrix by GTAP sector - Percentual do Capital no VA letra grega CI
-# ============================================================================================
-    L           = FuncoesApoio.read_file_txt('L',sDirectoryInput)
-    migracao    = FuncoesApoio.read_file_txt('migracao',sDirectoryInput)
-    Csi         = FuncoesApoio.read_file_txt('Csi',sDirectoryInput).reshape(nSectors, 1)
+    nValIntertemp = 8.47
+    # ============================================================================================
+    # read follows data of Brazil in txt files:
+    # L         - labor Vector stock by GTAP sector + unemployment ( 0 pos)
+    # migracao  - migracao Matrix by GTAP sector + unemployment
+    # Csi       - Csi Matrix by GTAP sector - Percentual do Capital no VA letra grega CI
+    # ============================================================================================
+    mInitialLaborStock = Support.read_file_txt('L', sDirectoryInput)
+    mInitialMigration  = Support.read_file_txt('migracao', sDirectoryInput)
+    mCsiBrasil         = Support.read_file_txt('Csi', sDirectoryInput).reshape(nSectors, 1)
   #
-    if nExecuta [nChoque] == 0:
-        if nChoque == 0:
-            VABrasil_pre, w_Brasil_pre, P_Brasil_pre, Y_pre, CrescTrab_pre, PBr_pre, xbilat_total_pre, GO_total_pre, p_total_pre, migr_pre = \
-                Equilibrium(nCountries, nSectors, nTradebleSectors, D, nYears, beta, v, Pos, migracao, L, vfactor,
-                            nMaxIter, nTolerance, Yinic, nAdjust, Csi, nChoque, sDirectoryInput, sDirectoryOutput)
-
+    if nExecute [nCenario] == 0:
+        if nCenario == 0:
+            VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre, xbilat_total_pre, \
+            mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm = \
+                Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp,
+                            nPositionBR, mInitialMigration, mInitialLaborStock, nFactor, nMaxIteration, nTolerance,
+                            mInitialY, nAdjust, mCsiBrasil, nCenario, sDirectoryInput, sDirectoryOutput)
             sFileName = "ResultadosSemChoque.xlsx"
             lSheet    = ['VABrasil', 'w_Brasil', 'P_Brasil', 'Y', 'cresc_trab', 'PBr', 'xbilat_total', 'GO_total',
                          'p_total', 'migr']
-            lData     = [VABrasil_pre, w_Brasil_pre, P_Brasil_pre, Y_pre, CrescTrab_pre, PBr_pre, xbilat_total_pre,
-                         GO_total_pre, p_total_pre, migr_pre]
+            lData     = [VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre,
+                         xbilat_total_pre, mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm]
 
         else:
-            VABrasil_pos, w_Brasil_pos, P_Brasil_pos, Y_pos, CrescTrab_pos, PBr_pos, xbilat_total_pos, GO_total_pos, p_total_pos, migr_pos = \
-                Equilibrium(nCountries, nSectors, nTradebleSectors, D, nYears, beta, v, Pos, migracao, L, vfactor,
-                            nMaxIter, nTolerance, Yinic, nAdjust, Csi, nChoque, sDirectoryInput, sDirectoryOutput)
-
+            VABrasil_pos, w_Brasil_pos, mPricesBrazilShock, mYShock, mGrowthLaborShock, PBr_pos, xbilat_total_pos, \
+            mGrossOutputTotalShock, mAllPriceShock, mMigrationShock = \
+                Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp,
+                            nPositionBR, mInitialMigration, mInitialLaborStock, nFactor, nMaxIteration, nTolerance,
+                            mInitialY, nAdjust, mCsiBrasil, nCenario, sDirectoryInput, sDirectoryOutput)
             sFileName = "ResultadosComChoque.xlsx"
             lSheet    = ['VABrasil_C', 'w_Brasil_C', 'P_Brasil_C', 'Y_C', 'cresc_trab_C', 'PBr_C', 'xbilat_total_C',
                          'GO_total_C', 'p_total_C', 'migr_C']
-            lData     = [VABrasil_pos, w_Brasil_pos, P_Brasil_pos, Y_pos, CrescTrab_pos, PBr_pos, xbilat_total_pos,
-                         GO_total_pos, p_total_pos, migr_pos]
+            lData     = [VABrasil_pos, w_Brasil_pos, mPricesBrazilShock, mYShock, mGrowthLaborShock, PBr_pos,
+                         xbilat_total_pos, mGrossOutputTotalShock, mAllPriceShock, mMigrationShock]
 
-        FuncoesApoio.write_data_excel(sDirectoryOutput, sFileName, lSheet, lData)
-#        for each in range(len(lSheet)):
-#            FuncoesApoio.write_file_excel(sDirectoryOutput ,lSheet[each]+".xlsx",lSheet[each], lData[each])
+        Support.write_data_excel(sDirectoryOutput, sFileName, lSheet, lData)
     else:
-        if nChoque == 0:
+        if nCenario == 0:
             vSheet    = ['VABrasil', 'w_Brasil', 'P_Brasil', 'Y', 'cresc_trab', 'PBr', 'xbilat_total', 'GO_total',
                          'p_total', 'migr']
-            VABrasil_pre, w_Brasil_pre, P_Brasil_pre, Y_pre, CrescTrab_pre, PBr_pre, xbilat_total_pre, GO_total_pre, \
-            p_total_pre, migr_pre = FuncoesApoio.read_data_excel(sDirectoryOutput, "ResultadosSemChoque.xlsx", vSheet)
+            VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre, xbilat_total_pre, \
+            mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm = \
+                Support.read_data_excel(sDirectoryOutput, "ResultadosSemChoque.xlsx", vSheet)
         else:
             vSheet    = ['VABrasil_C', 'w_Brasil_C', 'P_Brasil_C', 'Y_C', 'cresc_trab_C', 'PBr_C', 'xbilat_total_C',
                          'GO_total_C', 'p_total_C', 'migr_C']
-            VABrasil_pos, w_Brasil_pos, P_Brasil_pos, Y_pos, CrescTrab_pos, PBr_pos, xbilat_total_pos, GO_total_pos, \
-            p_total_pos, migr_pos = FuncoesApoio.read_data_excel(sDirectoryOutput, "ResultadosComChoque.xlsx", vSheet)
-
+            VABrasil_pos, w_Brasil_pos, mPricesBrazilShock, mYShock, mGrowthLaborShock, PBr_pos, xbilat_total_pos, \
+            mGrossOutputTotalShock, mAllPriceShock, mMigrationShock = \
+                Support.read_data_excel(sDirectoryOutput, "ResultadosComChoque.xlsx", vSheet)
 
 
 print("+++++++++++++++++++++++++++++++++++")
@@ -156,13 +157,13 @@ vSheetName = []
 # ============================================================================================
 p_pre = np.zeros([nYears, nSectors], dtype=float)
 p_pos = np.zeros([nYears, nSectors], dtype=float)
-p_pre[0, :] = P_Brasil_pre[0, :]
-p_pos[0, :] = P_Brasil_pos[0, :]
+p_pre[0, :] = mPricesBrazilNorm[0, :]
+p_pos[0, :] = mPricesBrazilShock[0, :]
 for t in range(1,nYears):
     for j in range(nSectors):
-        p_pre[t, j] =P_Brasil_pre[t, j] * p_pre[t - 1, j]
+        p_pre[t, j] = mPricesBrazilNorm[t, j] * p_pre[t - 1, j]
 
-        p_pos[t, j] =P_Brasil_pos[t, j] * p_pos[t - 1, j]
+        p_pos[t, j] = mPricesBrazilShock[t, j] * p_pos[t - 1, j]
 
 Crescimento_Preco = (p_pos / p_pre - 1) * 100
 #
@@ -198,9 +199,9 @@ for t in range(1,nYears):
         S_pre[t, j] = w_Brasil_pre[t, j] * S_pre[t - 1, j]
         S_pos[t, j] = w_Brasil_pos[t, j] * S_pos[t - 1, j]
 
-IP_pre_aux = np.tile((IP_pre).reshape(nYears,1), nSectors)
+IP_pre_aux = np.tile(IP_pre.reshape(nYears,1), nSectors)
 S_pre = S_pre / IP_pre_aux
-IP_pos_aux = np.tile((IP_pos).reshape(nYears,1), nSectors)
+IP_pos_aux = np.tile(IP_pos.reshape(nYears,1), nSectors)
 S_pos = S_pos / IP_pos_aux
 Crescimento_Salario = (S_pos / S_pre - 1) * 100
 #
@@ -248,8 +249,8 @@ for t in range(nYears):
     VA_serv_pre[t]        = sum(VA_pre[t, 42:57])
     VA_serv_pos[t]        = sum(VA_pos[t, 42:57])
 
-VA_setores_pre = np.concatenate(((VA_agricultura_pre).reshape(nYears,1), (VA_ind_extr_pre).reshape(nYears,1), (VA_ind_tran_pre).reshape(nYears,1), (VA_serv_pre).reshape(nYears,1)),axis=1)
-VA_setores_pos = np.concatenate(((VA_agricultura_pos).reshape(nYears,1), (VA_ind_extr_pos).reshape(nYears,1), (VA_ind_tran_pos).reshape(nYears,1), (VA_serv_pos).reshape(nYears,1)),axis=1)
+VA_setores_pre = np.concatenate((VA_agricultura_pre.reshape(nYears,1), VA_ind_extr_pre.reshape(nYears,1), VA_ind_tran_pre.reshape(nYears,1), VA_serv_pre.reshape(nYears,1)),axis=1)
+VA_setores_pos = np.concatenate((VA_agricultura_pos.reshape(nYears,1), VA_ind_extr_pos.reshape(nYears,1), VA_ind_tran_pos.reshape(nYears,1), VA_serv_pos.reshape(nYears,1)),axis=1)
 Crescimento_setores = (VA_setores_pos / VA_setores_pre - 1) * 100
 #
 vDataSheet.append(Crescimento_setores)
@@ -267,7 +268,7 @@ tau_pre_time = np.zeros([nSectors * nCountries, nCountries], dtype=float)
 tau_pos_time = np.zeros([nSectors * nCountries, nCountries], dtype=float)
 
 lRead = ['Tarifas', 'TarifasZero']
-Tarifas, TarifasZero = FuncoesApoio.read_data_txt(lRead, sDirectoryInput)
+Tarifas, TarifasZero = Support.read_data_txt(lRead, sDirectoryInput)
 tau = np.vstack((1 + Tarifas / 100, np.ones([15 * nCountries, nCountries], dtype=float)))
 tau_pre = np.tile(tau, (nYears, 1))
 tau = np.vstack((1 + TarifasZero / 100, np.ones([15 * nCountries, nCountries], dtype=float)))
@@ -284,10 +285,10 @@ Cambio = np.zeros([nYears, nCountries], dtype=float)
 for t in range(nYears):
     for j in range(nSectors):
         for n in range(nCountries):
-            GO_pre_time[j, n] = GO_total_pre[t * nSectors + j, n]
-            GO_pos_time[j, n] = GO_total_pos[t * nSectors + j, n]
-            p_pre_time[j, n] = p_total_pre[t * nSectors + j, n]
-            p_pos_time[j, n] = p_total_pos[t * nSectors + j, n]
+            GO_pre_time[j, n] = mGrossOutputTotalNorm[t * nSectors + j, n]
+            GO_pos_time[j, n] = mGrossOutputTotalShock[t * nSectors + j, n]
+            p_pre_time[j, n] = mAllPriceNorm[t * nSectors + j, n]
+            p_pos_time[j, n] = mAllPriceShock[t * nSectors + j, n]
 
     export_pre = np.zeros([nSectors * nCountries, nCountries], dtype=float)
     export_pos = np.zeros([nSectors * nCountries, nCountries], dtype=float)
@@ -309,8 +310,8 @@ for t in range(nYears):
     GO_pesos_pre = GO_pre_time / GO_totalaux_pre
     GO_pesos_pos = GO_pos_time / GO_totalaux_pos
 
-    ind_p_pre = np.prod(p_pre_time ** (GO_pesos_pre), axis=0)
-    ind_p_pos = np.prod(p_pos_time ** (GO_pesos_pos), axis=0)
+    ind_p_pre = np.prod(p_pre_time ** GO_pesos_pre, axis=0)
+    ind_p_pos = np.prod(p_pos_time ** GO_pesos_pos, axis=0)
 
     export_pre_aux = np.zeros([nCountries * nTradebleSectors, nCountries], dtype=float)
     export_pos_aux = np.zeros([nCountries * nTradebleSectors, nCountries], dtype=float)
@@ -356,11 +357,11 @@ for t in range(nYears):
     pesos_comex_pre = total_comex_pre / comex_pre
     pesos_comex_pos = total_comex_pos / comex_pos
 
-    ind_p_pre_aux = np.tile((ind_p_pre.T).reshape(nCountries,1), (1, nCountries))
-    ind_p_pos_aux = np.tile((ind_p_pos.T).reshape(nCountries,1), (1, nCountries))
+    ind_p_pre_aux = np.tile(ind_p_pre.T.reshape(nCountries,1), (1, nCountries))
+    ind_p_pos_aux = np.tile(ind_p_pos.T.reshape(nCountries,1), (1, nCountries))
 
-    p_exterior_pre = np.prod(ind_p_pre_aux ** (pesos_comex_pre), axis=0)
-    p_exterior_pos = np.prod(ind_p_pos_aux ** (pesos_comex_pos), axis=0)
+    p_exterior_pre = np.prod(ind_p_pre_aux ** pesos_comex_pre, axis=0)
+    p_exterior_pos = np.prod(ind_p_pos_aux ** pesos_comex_pos, axis=0)
 
     cambio_pre = p_exterior_pre / ind_p_pre
     cambio_pos = p_exterior_pos / ind_p_pos
@@ -438,9 +439,9 @@ for t in range(nYears):
 
 for t in range(nYears):
     for i in range (nTradebleSectors):
-        cresc_export_brasil[t,i] = cresc_export[t*nSectors+i,Pos]
-        export_brasil_pre[t,i] = export_brasil_pre_aux[t*nSectors+i,Pos]
-        export_brasil_pos[t,i] = export_brasil_pos_aux[t*nSectors+i,Pos]
+        cresc_export_brasil[t,i] = cresc_export[t*nSectors+i,nPositionBR]
+        export_brasil_pre[t,i] = export_brasil_pre_aux[t*nSectors+i,nPositionBR]
+        export_brasil_pos[t,i] = export_brasil_pos_aux[t*nSectors+i,nPositionBR]
 
 #
 vDataSheet.append(cresc_export_total)
@@ -534,7 +535,7 @@ vSheetName.append('ExportacaoPorPais')
 # ============================================================================================
 export_por_produto_pais_pos = (export_pos / export_pre - 1)*100
 export_por_produto_pais_pos[np.isnan(export_por_produto_pais_pos)]=0
-export_Brasil_pos = export_por_produto_pais_pos[:, Pos]
+export_Brasil_pos = export_por_produto_pais_pos[:, nPositionBR]
 export_Brasil_final = np.zeros([nTradebleSectors, nCountries], dtype=float)
 
 for n in range(nCountries):
@@ -564,7 +565,7 @@ vSheetName.append('ExportacaoBrasil')
 #%}
 import_Brasil_final = np.zeros([nTradebleSectors, nCountries], dtype=float)
 for n in range(nCountries):
-    import_Brasil_final[:,n] = export_por_produto_pais_pos[Pos:nCountries*nTradebleSectors:nCountries,n]
+    import_Brasil_final[:,n] = export_por_produto_pais_pos[nPositionBR:nCountries*nTradebleSectors:nCountries,n]
 #
 vDataSheet.append(import_Brasil_final)
 vSheetName.append('ImportacaoBrasil')
@@ -572,15 +573,15 @@ vSheetName.append('ImportacaoBrasil')
 # ============================================================================================
 # Variação do Mercado de trabalho
 # ============================================================================================
-num_trab_pre = np.zeros([nYears, D], dtype=float)
-num_trab_pos = np.zeros([nYears, D], dtype=float)
+num_trab_pre = np.zeros([nYears, nSectorsLabor], dtype=float)
+num_trab_pos = np.zeros([nYears, nSectorsLabor], dtype=float)
 
-num_trab_pre[0,:] = L * CrescTrab_pre[0,:]
-num_trab_pos[0,:] = L * CrescTrab_pos[0,:]
+num_trab_pre[0,:] = mInitialLaborStock * mGrowthLaborNorm[0, :]
+num_trab_pos[0,:] = mInitialLaborStock * mGrowthLaborShock[0, :]
 
 for t in range(1,nYears):
-    num_trab_pre[t, :] = num_trab_pre[t-1,:] * CrescTrab_pre[t, :]
-    num_trab_pos[t, :] = num_trab_pos[t-1,:] * CrescTrab_pos[t, :]
+    num_trab_pre[t, :] = num_trab_pre[t-1,:] * mGrowthLaborNorm[t, :]
+    num_trab_pos[t, :] = num_trab_pos[t-1,:] * mGrowthLaborShock[t, :]
 
 Cresc_PO = (num_trab_pos / num_trab_pre-1)*100
 #
@@ -710,27 +711,27 @@ P_economia_pos    = np.zeros([nYears], dtype=float)
 P_pre    = np.zeros([nYears,nSectors], dtype=float)
 P_pos    = np.zeros([nYears,nSectors], dtype=float)
 
-p_pre[0,:] = P_Brasil_pre[0,:]
-p_pos[0,:] = P_Brasil_pos[0,:]
+p_pre[0,:] = mPricesBrazilNorm[0, :]
+p_pos[0,:] = mPricesBrazilShock[0, :]
 for t in range(1,nYears):
     for j in  range(nSectors):
-        p_pre[t, j] = P_Brasil_pre[t, j] * p_pre[t - 1, j]
-        p_pos[t, j] = P_Brasil_pos[t, j] * p_pos[t - 1, j]
+        p_pre[t, j] = mPricesBrazilNorm[t, j] * p_pre[t - 1, j]
+        p_pos[t, j] = mPricesBrazilShock[t, j] * p_pos[t - 1, j]
 
-alphas = FuncoesApoio.read_file_txt('Alphas',sDirectoryInput)
+alphas = Support.read_file_txt('Alphas', sDirectoryInput)
 #alphas = np.ones([nSectors,nCountries], dtype=float)
-alphas_aux = (alphas.T).reshape(nCountries, nSectors)
+alphas_aux = alphas.T.reshape(nCountries, nSectors)
 
 for t in range(nYears):
-    P_agricultura_pre[t] = np.prod(p_pre[t, 0:14] ** (alphas_aux[Pos, 0:14]), axis=0)
-    P_agricultura_pos[t] = np.prod(p_pos[t, 0:14]  ** (alphas_aux[Pos, 0:14]), axis=0)
-    P_ind_extr_pre[t]    = np.prod(p_pre[t, 14:18] ** (alphas_aux[Pos, 14:18]), axis=0)
-    P_ind_extr_pos[t]    = np.prod(p_pos[t, 14:18] ** (alphas_aux[Pos, 14:18]), axis=0)
+    P_agricultura_pre[t] = np.prod(p_pre[t, 0:14] ** (alphas_aux[nPositionBR, 0:14]), axis=0)
+    P_agricultura_pos[t] = np.prod(p_pos[t, 0:14]  ** (alphas_aux[nPositionBR, 0:14]), axis=0)
+    P_ind_extr_pre[t]    = np.prod(p_pre[t, 14:18] ** (alphas_aux[nPositionBR, 14:18]), axis=0)
+    P_ind_extr_pos[t]    = np.prod(p_pos[t, 14:18] ** (alphas_aux[nPositionBR, 14:18]), axis=0)
 
-    P_ind_tran_pre[t]    = np.prod(p_pre[t, 18:42] ** (alphas_aux[Pos, 18:42]), axis=0)
-    P_ind_tran_pos[t]    = np.prod(p_pos[t, 18:42] ** (alphas_aux[Pos, 18:42]), axis=0)
-    P_serv_pre[t]        = np.prod(p_pre[t, 42:57] ** (alphas_aux[Pos, 42:57]), axis=0)
-    P_serv_pos[t]        = np.prod(p_pos[t, 42:57] ** (alphas_aux[Pos, 42:57]), axis=0)
+    P_ind_tran_pre[t]    = np.prod(p_pre[t, 18:42] ** (alphas_aux[nPositionBR, 18:42]), axis=0)
+    P_ind_tran_pos[t]    = np.prod(p_pos[t, 18:42] ** (alphas_aux[nPositionBR, 18:42]), axis=0)
+    P_serv_pre[t]        = np.prod(p_pre[t, 42:57] ** (alphas_aux[nPositionBR, 42:57]), axis=0)
+    P_serv_pos[t]        = np.prod(p_pos[t, 42:57] ** (alphas_aux[nPositionBR, 42:57]), axis=0)
 
 Precos_setores_pre = np.concatenate((P_agricultura_pre.reshape(nYears,1), P_ind_extr_pre.reshape(nYears,1), P_ind_tran_pre.reshape(nYears,1), P_serv_pre.reshape(nYears,1)), axis=1)
 Precos_setores_pos = np.concatenate((P_agricultura_pos.reshape(nYears,1), P_ind_extr_pos.reshape(nYears,1), P_ind_tran_pos.reshape(nYears,1), P_serv_pos.reshape(nYears,1)), axis=1)
@@ -744,16 +745,16 @@ vSheetName.append('PrecosSetoriais')
 # ============================================================================================
 # Variação da Taxa de ajuste - PO
 # ============================================================================================
-num_trab_pre    = np.zeros([nYears, D], dtype=float)
-num_trab_pos    = np.zeros([nYears, D], dtype=float)
-cum_ajuste_aux  = np.zeros([nYears, D], dtype=float)
+num_trab_pre    = np.zeros([nYears, nSectorsLabor], dtype=float)
+num_trab_pos    = np.zeros([nYears, nSectorsLabor], dtype=float)
+cum_ajuste_aux  = np.zeros([nYears, nSectorsLabor], dtype=float)
 ajuste_PO       = np.zeros([nYears], dtype=float)
-num_trab_pre[0,:] = L * CrescTrab_pre[0,:]
-num_trab_pos[0,:] = L * CrescTrab_pos[0,:]
+num_trab_pre[0,:] = mInitialLaborStock * mGrowthLaborNorm[0, :]
+num_trab_pos[0,:] = mInitialLaborStock * mGrowthLaborShock[0, :]
 
 for t in range(1,nYears):
-    num_trab_pre[t,:] = num_trab_pre[t-1,:] * CrescTrab_pre[t,:]
-    num_trab_pos[t,:] = num_trab_pos[t-1,:] * CrescTrab_pos[t,:]
+    num_trab_pre[t,:] = num_trab_pre[t-1,:] * mGrowthLaborNorm[t, :]
+    num_trab_pos[t,:] = num_trab_pos[t-1,:] * mGrowthLaborShock[t, :]
 for t in range(nYears):
     cum_ajuste_aux[t,:] = .5 * abs(num_trab_pos[t,:]-num_trab_pre[t,:])
 
@@ -778,7 +779,7 @@ vSheetName.append('AjustePO')
 # ============================================================================================
 # Gravacao ResultadoModelo
 # ============================================================================================
-FuncoesApoio.write_data_excel(sDirectoryOutput, "ResultadoModelo.xlsx", vSheetName, vDataSheet)
+Support.write_data_excel(sDirectoryOutput, "ResultadoModelo.xlsx", vSheetName, vDataSheet)
 
 print("End")
 sys.exit(0)
