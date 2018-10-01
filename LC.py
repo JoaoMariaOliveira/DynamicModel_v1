@@ -1,13 +1,12 @@
 # ============================================================================================
-# Função EquiliBrium_LC
-# Portada para Python por João Maria em 26/4/2018
+# EquiliBrium_LC function
+# ported to Python by  João Maria
 # ============================================================================================
 import numpy as np
 from LMC import LMC
 from Dinprime import Dinprime
 from Expenditure import Expenditure
 from PH import PH
-
 
 def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareVA, mIO, Din, nSectors, nCountries,
                    nMaxIteracions, nTolerance, VAn, Sn, vfactor, LG, VA_Br, nBeta, nPositionBR, nActualYear,
@@ -16,10 +15,8 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
     mWagesBrasil = wbr_aux[:, nActualYear].reshape(nSectors, 1)
     mPriceFactor = np.ones([nSectors, nCountries], dtype=float)
     PQ = 1000 * np.ones([nCountries, nSectors], dtype=float)
-
     nInterations = 1
     wfmax = 1.0
-
     while (nInterations <=nMaxIteracions) and (wfmax > nTolerance):
 
         mPriceFactor, mCost = PH(mWages, mTauHat, mLinearThetas, mThetas, mShareVA, mIO, Din, nSectors, nCountries,
@@ -28,7 +25,6 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
         # Calculating trade shares
         mTradeShare = Dinprime(Din, mTauHat, mCost, mLinearThetas, mThetas, nSectors, nCountries)
         mTradeShareOM = mTradeShare / mTauActual
-
         mWeightedTariffs = np.zeros([nSectors, nCountries], dtype=float)
         for j in range(nSectors):
             mWeightedTariffs[j, :] = sum((mTradeShare[j * nCountries: (j + 1) * nCountries: 1, :] / mTauActual[j * nCountries: (j + 1) * nCountries: 1, :]).T)
@@ -50,14 +46,11 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
 
         # Exports
         LHS = sum(DP).reshape(nCountries, 1)
-
         # calculating RHS (Imports) trade balance
         PF = PQ * mWeightedTariffs
         # Imports
         RHS = sum(PF).reshape(nCountries, 1)
-
         Sn_pos = -(RHS - LHS)
-
         xbilattau = (PQ_vec * np.ones([1, nCountries], dtype=float)) * mTradeShareOM
         GO = np.ones([nSectors, nCountries], dtype=float)
         for j in range(nSectors):
@@ -69,16 +62,12 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
         Qui_pos = sum(rem_cap_pos)
         iota_pos = (rem_cap_pos - Sn) / Qui_pos
         ZW2 = iota_pos - mIota
-
         # Excess function (trade balance)
-
         Snp = (RHS - LHS) + Sn
         ZW2 = -(RHS - LHS + Sn) / VAn
-
         # Itaration factor prices
         mWagesAux = mWages * (1 - vfactor * ZW2 / mWages)
         mWagesBrasilTemp = mWagesBrasil * (1 - vfactor * ZW / mWagesBrasil)
-
         wfmax = sum(abs(ZW2))
         mWages = mWagesAux
         mWagesBrasil = mWagesBrasilTemp

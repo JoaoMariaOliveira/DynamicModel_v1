@@ -1,6 +1,6 @@
 # ============================================================================================
 # EquiliBrium Function
-# Portada para Python por João Maria em 26/4/2018
+# ported to Python by João Maria at 26/4/2018
 # ============================================================================================
 import numpy as np
 from Labor import Labor
@@ -68,11 +68,9 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
 
         # Calculating expenditures
         xbilat = np.vstack((mTrade, np.zeros([(nSectors - nTradebleSectors) * nCountries, nCountries]))) * mTauPrev
-
         # Domestic sales
         x = np.zeros([nSectors, nCountries])
         xbilat_domestic = xbilat / mTauPrev
-
         for i in range(nSectors):
             # Computing sum of partial columns (0 a 30, 31 sectors) of exports
             # Adding as rows
@@ -81,7 +79,6 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
         # Checking MAX between Exports and Domestic Product
         mGrossOutput = np.maximum(mGrossOutput, x)
         domsales = mGrossOutput - x
-
         # Bilateral trade matrix
         domsales_aux = domsales.T
         aux2 = np.zeros([nSectors * nCountries, nCountries], dtype=float)
@@ -89,18 +86,15 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
             aux2[i * nCountries: ((i + 1) * nCountries), :] = np.diag(domsales_aux[:, i])
 
         xbilat = aux2 + xbilat
-
         # Calculating Expenditures shares
         A = sum(xbilat.T)
         XO = np.zeros([nSectors, nCountries])
-
         for j in range(nSectors):
             XO[j, :] = A[j * nCountries: (j + 1) * nCountries]
 
         # Calculating expenditures shares
         Xjn = sum(xbilat.T).T.reshape(nSectors * nCountries, 1).dot(np.ones([1, nCountries], dtype=float))
         Din = xbilat / Xjn
-
         # Calculating superavits
         xbilattau = xbilat / mTauPrev
         M = np.zeros([nSectors, nCountries])
@@ -113,11 +107,9 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
                 E[j, n] = sum(xbilattau[j * nCountries: (j + 1) * nCountries, n]).T
 
         Sn = (sum(E).T - sum(M).T).reshape(nCountries, 1)
-
         # Calculating Value Added
         VAjn = mGrossOutput * mShareVA
         VAn = sum(VAjn).T.reshape(nCountries, 1)
-
         VA_Br = np.ones([nSectors, 1], dtype= float)
         for j in range(nSectors):
             VA_Br[j, 0] = VAjn[j, nPositionBR]
@@ -136,22 +128,18 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
             F[j, :] = sum((Din[j * nCountries: (j + 1) * nCountries:1, :] / mTauPrev[j * nCountries: (j + 1) * nCountries:1, :]).T)
 
         mAlphas = num / (np.ones([nSectors, 1], dtype=float)).dot((VAn + sum(XO * (1 - F)).T.reshape(nCountries, 1) - Sn).T)
-
         for j in range(nSectors):
             for n in range(nCountries):
                 if mAlphas[j, n] < 0:
                     mAlphas[j, n] = 0
 
         mAlphas = mAlphas / np.ones([nSectors, 1]).dot(sum(mAlphas).reshape(1, nCountries))
-
         ##############################
         # Main program conterfactuals
         ##############################
-
         VAn = VAn / 100
         Sn = Sn / 100
         VA_Br = VA_Br / 100
-
         VABrasil = np.ones([nYears, nSectors], dtype=float)
         w_Brasil = np.ones([nYears, nSectors], dtype=float)
         P_Brasil = np.ones([nYears, nSectors], dtype=float)
@@ -159,7 +147,6 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
         xbilat_total = np.zeros([nYears * nSectors * nCountries, nCountries], dtype=float)
         mGrossOutputTotal = np.zeros([nYears * nSectors, nCountries], dtype=float)
         mAllPrice = np.zeros([nYears * nSectors, nCountries], dtype=float)
-
         # ============================================================================================
         # Routine that repeat for nYears years
         # ============================================================================================
@@ -194,7 +181,6 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
             Dinp_om = mTradeShare / mTauActual
             xbilattau = (PQ_vec.dot(np.ones((1, nCountries)))) * Dinp_om
             xbilatp = xbilattau * mTauActual
-
             for j in range(nSectors):
                 mGrossOutput[j, :] = sum(xbilattau[j * nCountries: (j + 1) * nCountries, :])
 
