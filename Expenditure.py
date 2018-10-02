@@ -6,19 +6,10 @@
  Inputs are A = alphas, B = bethas, G = I-O matrix, Dinp = trade shares,
  tarifap = tarifs, mWeightedTariffs = trade weighted tariffs """
 
-import numpy as np
-# ============================================================================================
-def ExpenditureAux(OM, Vb, Bb, nCountries, nSectors, PQ):
-    Soma = Vb + Bb
-    PQmax = 1
-    while PQmax > 1E-07:
-        Dif = np.dot(OM, PQ) - Soma
-     #   Dif_aux = abs(Dif)
-        PQmax = max(abs(Dif))
-        PQ = PQ - Dif
 
-    return PQ
-# ============================================================================================
+import numpy as np
+from expenditure_aux import ExpenditureAux
+@profile
 def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
                 LG, VA_Br, mWagesBrasil, nPositionBR, PQ):
 
@@ -58,8 +49,9 @@ def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariff
     Bb = -mAlphas * (Sn * np.ones((1, nSectors))).T
     Bb = Bb.reshape(nSectors * nCountries, 1, order='F').copy()
     PQ_vec = PQ.T.reshape(nSectors * nCountries, 1, order='F').copy()
-    PQ = ExpenditureAux(OM, Vb, Bb, nCountries, nSectors, PQ_vec)
 
+    Soma = Vb + Bb
+    PQ = ExpenditureAux(OM, Soma, PQ_vec)
 
     #temp = matrix_power(OM, -1)
     #DD1 = temp.dot(Vb)
