@@ -33,7 +33,45 @@ def ExpenditureAux(double[:, :] OM, double[:, :] Soma, np.ndarray[DTYPE_t, ndim=
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def PHf(double[:,::1] Din_om, double[:,::1] mCost, np.ndarray[DTYPE_t, ndim=1] mThetas, Py_ssize_t nSectors, Py_ssize_t nCountries):
+def PH_F(mWages, mTauHat, mLinearThetas, mThetas, mShareVA, G, Din, Py_ssize_t nSectors, Py_ssize_t nCountries, unsigned int nMaxIterations, double nTolerance,
+       mWagesBrasil, Py_ssize_t nPositionBR, mPriceFactor, LG, mCsiBrasil):
+    # initialize vectors of ex-post wage and price factors
+
+    cdef Py_ssize_t i
+    cdef unsigned int nMaxDiffPrice = 1
+    cdef unsigned int nIteration = 1
+    cdef np.ndarray[DTYPE_t, ndim=2] mLogCost = np.ones([nSectors, nCountries], dtype=float)
+    mCost = np.ones([nSectors, nCountries], dtype=float)
+    Din_om = np.zeros([nSectors * nCountries, nCountries], dtype=float)
+    while nIteration <= nMaxIterations and nMaxDiffPrice > nTolerance:
+        mLogWages = np.log(mWages)
+        mLogPrice = np.log(mPriceFactor)
+        mLogWagesBrasil = np.log(mWagesBrasil)
+        # calculating log cost
+        for i in range(nCountries):
+            mLogCost[:, i] = ((mShareVA[:, i] * mLogWages[i]).reshape(nSectors, 1) + ((1 - mShareVA[:, i]).reshape(nSectors, 1)
+             * np.dot(G[i * nSectors: (i + 1) * nSectors, :].T, mLogPrice[:, i].reshape(nSectors, 1))).reshape(nSectors, 1)).reshape(nSectors)
+
+        for i in range(nSectors):
+            mLogCost[i, nPositionBR] = (mShareVA[i, nPositionBR] * mLogWagesBrasil[i]) + (mShareVA[i, nPositionBR] * mCsiBrasil[i, 0]
+             * np.log(LG[i, 0])) + (1 - mShareVA[i, nPositionBR]) * np.dot(G[nPositionBR * nSectors:(nPositionBR + 1) * nSectors, i].T ,mLogPrice[:, nPositionBR])
+
+        mCost = np.exp(mLogCost)
+        Din_om = Din * mTauHat ** (-1/(mLinearThetas * np.ones([1, nCountries], dtype=float)))
+        mPriceHat = PHf(Din_om, mCost, mThetas.T[0], nSectors, nCountries)
+
+        # Checking tolerance
+        mPriceDiff = abs(mPriceHat - mPriceFactor)
+        mPriceFactor = mPriceHat
+        nMaxDiffPrice = np.amax(mPriceDiff)
+        nIteration += 1
+
+    return mPriceFactor, mCost
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef PHf(double[:,::1] Din_om, double[:,::1] mCost, np.ndarray[DTYPE_t, ndim=1] mThetas, Py_ssize_t nSectors, Py_ssize_t nCountries):
     cdef np.ndarray[DTYPE_t, ndim=2] mPriceHat = np.zeros([nSectors, nCountries], dtype=float)
     cdef double[:,:] mPriceHatView = mPriceHat
     cdef double[:] powers = -1/mThetas
