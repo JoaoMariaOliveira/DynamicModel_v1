@@ -3,6 +3,7 @@ import numpy as np
 # ============================================================================================
 # Labor Function that calculates
 # ============================================================================================
+@profile
 def Labor(Y, N, J, D, T, beta, migracao, L):
     Ybeta = Y ** beta
     Migr0 = np.ones([(T+1) * D, D],dtype=float)
