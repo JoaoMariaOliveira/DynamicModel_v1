@@ -5,8 +5,8 @@ from Cython.Build import cythonize
 
 ext_modules = [
     Extension(
-        'expenditure_aux',
-        ['expenditure_aux.pyx']
+        'cfuncs',
+        ['cfuncs.pyx']
     ),
 ]
 

@@ -10,7 +10,8 @@ def kron(a, nrows):
     return np.repeat(a, nrows * np.ones(a.shape[0], np.int), axis=0)
 
 import numpy as np
-from expenditure_aux import ExpenditureAux
+from cfuncs import ExpenditureAux
+
 @profile
 def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
                 LG, VA_Br, mWagesBrasil, nPositionBR, PQ):
@@ -64,6 +65,4 @@ def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariff
     #DD1 = temp.dot(Vb)
     #DD2 = temp.dot(Bb)
     #PQ = DD1 + DD2
-    PQ = PQ.reshape(nSectors, nCountries, order='F').copy()
-
-    return PQ
+    return PQ.reshape(nSectors, nCountries, order='F')

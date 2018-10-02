@@ -1,5 +1,5 @@
 import numpy as np
-from expenditure_aux import PHf
+from cfuncs import PHf
 
 def PH_subroutine(Din_om, mCost, mThetas, nSectors, nCountries):
     mPriceHat = np.zeros([nSectors, nCountries], dtype=float)
