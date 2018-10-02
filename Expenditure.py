@@ -6,6 +6,8 @@
  Inputs are A = alphas, B = bethas, G = I-O matrix, Dinp = trade shares,
  tarifap = tarifs, mWeightedTariffs = trade weighted tariffs """
 
+def kron(a, nrows):
+    return np.repeat(a, nrows * np.ones(a.shape[0], np.int), axis=0)
 
 import numpy as np
 from expenditure_aux import ExpenditureAux
@@ -32,11 +34,16 @@ def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariff
         for n in range(nCountries):
             NBP[j, n * nSectors: (n + 1) * nSectors] = BP[n: nSectors * nCountries: nCountries, j]
 
-    NNBP = np.kron(NBP, np.ones([nSectors, 1], dtype=float))
-    GG = np.kron(np.ones([1, nCountries], dtype=float), mIO)
+    NNBP = kron(NBP, nSectors)
+    # NNBP_old = np.kron(NBP, np.ones([nSectors, 1], dtype=float))
+    # assert np.array_equal(NNBP, NNBP_old)
+    GG = np.tile(mIO, nCountries)
+    # GG_old = np.kron(np.ones([1, nCountries], dtype=float), mIO)
+    # assert np.array_equal(GG, GG_old)
     GP = GG * NNBP
 
-    OM = np.eye(nSectors * nCountries, nSectors * nCountries, dtype=float) - (GP + IA)
+    I = np.eye(nSectors * nCountries, nSectors * nCountries, dtype=float)
+    OM = I - (GP + IA)
 
     A = np.kron(np.ones([nSectors, 1], dtype=float), (mWages * VAn).T) #.reshape(1, N))
     mShareVA = mWagesBrasil * LG * VA_Br

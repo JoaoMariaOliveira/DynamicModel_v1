@@ -3,13 +3,10 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
 
-# OpenMP: http://docs.cython.org/en/latest/src/userguide/parallelism.html#compiling
 ext_modules = [
     Extension(
         'expenditure_aux',
-        ['expenditure_aux.pyx'],
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp'],
+        ['expenditure_aux.pyx']
     ),
 ]
 
