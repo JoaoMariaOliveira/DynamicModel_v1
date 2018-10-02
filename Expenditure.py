@@ -10,7 +10,13 @@ def kron(a, nrows):
     return np.repeat(a, nrows * np.ones(a.shape[0], np.int), axis=0)
 
 import numpy as np
-from cfuncs import ExpenditureAux
+from cfuncs import ExpenditureAux, OM_sum_f
+
+def OM_sum(GG, NNBP, IA, nSectors, nCountries):
+    GP = GG * NNBP
+    I = np.eye(nSectors * nCountries, nSectors * nCountries, dtype=float)
+    OM = I - (GP + IA)
+    return OM
 
 @profile
 def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
@@ -41,10 +47,9 @@ def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariff
     GG = np.tile(mIO, nCountries)
     # GG_old = np.kron(np.ones([1, nCountries], dtype=float), mIO)
     # assert np.array_equal(GG, GG_old)
-    GP = GG * NNBP
-
-    I = np.eye(nSectors * nCountries, nSectors * nCountries, dtype=float)
-    OM = I - (GP + IA)
+    OM = OM_sum_f(GG, NNBP, IA, nSectors, nCountries)
+    # OM_old = OM_sum(GG, NNBP, IA, nSectors, nCountries)
+    # assert np.array_equal(OM, OM_old)
 
     A = np.kron(np.ones([nSectors, 1], dtype=float), (mWages * VAn).T) #.reshape(1, N))
     mShareVA = mWagesBrasil * LG * VA_Br
