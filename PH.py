@@ -1,6 +1,21 @@
 import numpy as np
+from expenditure_aux import PHf
+
+def PH_subroutine(Din_om, mCost, mThetas, nSectors, nCountries):
+    mPriceHat = np.zeros([nSectors, nCountries], dtype=float)
+    for j in range(nSectors):
+        for n in range(nCountries):
+            mPriceHat[j, n] = Din_om[n + j * nCountries, :].dot(mCost[j, :] ** (-1 / mThetas[j])).T
+            # this happens because of sectors with zero VA
+            # Note that we do not want logs of zero
+            if mPriceHat[j, n] == 0:
+                mPriceHat[j, n] = 1
+            else:
+                mPriceHat[j, n] = mPriceHat[j, n] ** (-mThetas[j])
+    return mPriceHat
 
 
+@profile
 def PH(mWages, mTauHat, mLinearThetas, mThetas, mShareVA, G, Din, nSectors, nCountries, nMaxIterations, nTolerance,
        mWagesBrasil, nPositionBR, mPriceFactor, LG, mCsiBrasil):
 
@@ -30,16 +45,8 @@ def PH(mWages, mTauHat, mLinearThetas, mThetas, mShareVA, G, Din, nSectors, nCou
         mCost = np.exp(mLogCost)
         Din_om = Din * mTauHat ** (-1/(mLinearThetas * np.ones([1, nCountries], dtype=float)))
         # calculating mPriceHat
-        mPriceHat = np.zeros([nSectors, nCountries], dtype=float)
-        for j in range(nSectors):
-            for n in range(nCountries):
-                mPriceHat[j, n] = Din_om[n + j * nCountries, :].dot(mCost[j, :] ** (-1 / mThetas[j])).T
-                # this happens because of sectors with zero VA
-                # Note that we do not want logs of zero
-                if mPriceHat[j, n] == 0:
-                    mPriceHat[j, n] = 1
-                else:
-                    mPriceHat[j, n] = mPriceHat[j, n] ** (-mThetas[j])
+        # mPriceHat = PH_subroutine(Din_om, mCost, mThetas, nSectors, nCountries)
+        mPriceHat = PHf(Din_om, mCost, mThetas.T[0], nSectors, nCountries)
 
         # Checking tolerance
         mPriceDiff = abs(mPriceHat - mPriceFactor)
