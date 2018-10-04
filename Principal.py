@@ -6,7 +6,7 @@
 import numpy as np
 import SupportFunctions as Support
 from Controle import Equilibrium
-import sys
+from multiprocessing import Pool
 # ============================================================================================
 # parâmetros gerais
 # ============================================================================================
@@ -17,6 +17,10 @@ import sys
 # sSheet             - Data Sheet
 sDirectoryInput  = './InputCenario1FormulaSuica/'
 sDirectoryOutput = './OutputCenario1FormulaSuica/'
+
+# If scenarios should be run in parallel:
+# Set to False for profiling, otherwise set to True
+parallel = False
 
 # ============================================================================================
 # general parameters
@@ -37,7 +41,8 @@ nStart = [0, 0]
 nFactor = -0.1
 # tolerance value for convergence
 #nTolerance = 1E-08
-nTolerance = 1E-04
+# nTolerance = 1E-04
+nTolerance = 1E-03
 # Maximum number of iterations
 nMaxIteration = 400000000
 nAdjust = 1
@@ -52,7 +57,8 @@ nTradebleSectors = 42
 nCountries = 27
 M = 27
 # Number of years in the model (T)
-nYears = 20
+# nYears = 20
+nYears = 2
 # Number of Sectors with unemployment
 nSectorsLabor = nSectors+1
 # Position of Brasil in matrices (arrays)
@@ -63,12 +69,26 @@ nPositionBR = 0
 # nCenario = 1 - runs with shok (Counterfactual scenario)
 #
 #
-for nCenario in range(2):
+# Calibration values
+nBeta = .9
+# intertemporal value
+nValIntertemp = 8.47
+# ============================================================================================
+# read follows data of Brazil in txt files:
+# L         - labor Vector stock by GTAP sector + unemployment ( 0 pos)
+# migracao  - migracao Matrix by GTAP sector + unemployment
+# Csi       - Csi Matrix by GTAP sector - Percentual do Capital no VA letra grega CI
+# ============================================================================================
+mInitialLaborStock = Support.read_file_txt('L', sDirectoryInput)
+mInitialMigration  = Support.read_file_txt('migracao', sDirectoryInput)
+mCsiBrasil         = Support.read_file_txt('Csi', sDirectoryInput).reshape(nSectors, 1)
+
+
+def run_scenario(nCenario):
     # generation of initial values (from the beginning or from previously saved data in an iteration)
     if nStart [nCenario] == 0:
         Y1 = np.ones([nYears, nSectorsLabor], dtype=float)
         w_aux = np.ones([nCountries, nYears], dtype=float)
-        p_aux = np.ones([nYears * nSectors, nCountries], dtype=float)
         wbr_aux = np.ones([nSectors, nYears], dtype=float)
 
         if nCenario == 0:
@@ -91,59 +111,50 @@ for nCenario in range(2):
 
     mInitialY = Y1
 
-    # Calibration values
-    nBeta = .9
-    # intertemporal value
-    nValIntertemp = 8.47
-    # ============================================================================================
-    # read follows data of Brazil in txt files:
-    # L         - labor Vector stock by GTAP sector + unemployment ( 0 pos)
-    # migracao  - migracao Matrix by GTAP sector + unemployment
-    # Csi       - Csi Matrix by GTAP sector - Percentual do Capital no VA letra grega CI
-    # ============================================================================================
-    mInitialLaborStock = Support.read_file_txt('L', sDirectoryInput)
-    mInitialMigration  = Support.read_file_txt('migracao', sDirectoryInput)
-    mCsiBrasil         = Support.read_file_txt('Csi', sDirectoryInput).reshape(nSectors, 1)
-  #
     if nExecute [nCenario] == 0:
         if nCenario == 0:
-            VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre, xbilat_total_pre, \
-            mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm = \
-                Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp,
-                            nPositionBR, mInitialMigration, mInitialLaborStock, nFactor, nMaxIteration, nTolerance,
-                            mInitialY, nAdjust, mCsiBrasil, nCenario, sDirectoryInput, sDirectoryOutput)
+            results = Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp,
+                                  nPositionBR, mInitialMigration, mInitialLaborStock, nFactor, nMaxIteration, nTolerance,
+                                  mInitialY, nAdjust, mCsiBrasil, nCenario, sDirectoryInput, sDirectoryOutput)
             sFileName = "ResultsOfNormalScenario.xlsx"
             lSheet    = ['VABrasil', 'w_Brasil', 'P_Brasil', 'Y', 'cresc_trab', 'PBr', 'xbilat_total', 'GO_total',
                          'p_total', 'migr']
-            lData     = [VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre,
-                         xbilat_total_pre, mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm]
-
+            lData     = list(results)
         else:
-            VABrasil_pos, w_Brasil_pos, mPricesBrazilShock, mYShock, mGrowthLaborShock, PBr_pos, xbilat_total_pos, \
-            mGrossOutputTotalShock, mAllPriceShock, mMigrationShock = \
-                Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp,
-                            nPositionBR, mInitialMigration, mInitialLaborStock, nFactor, nMaxIteration, nTolerance,
-                            mInitialY, nAdjust, mCsiBrasil, nCenario, sDirectoryInput, sDirectoryOutput)
+            results = Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp,
+                                  nPositionBR, mInitialMigration, mInitialLaborStock, nFactor, nMaxIteration, nTolerance,
+                                  mInitialY, nAdjust, mCsiBrasil, nCenario, sDirectoryInput, sDirectoryOutput)
             sFileName = "ResultsOfCounterfactualScenario.xlsx"
             lSheet    = ['VABrasil_C', 'w_Brasil_C', 'P_Brasil_C', 'Y_C', 'cresc_trab_C', 'PBr_C', 'xbilat_total_C',
                          'GO_total_C', 'p_total_C', 'migr_C']
-            lData     = [VABrasil_pos, w_Brasil_pos, mPricesBrazilShock, mYShock, mGrowthLaborShock, PBr_pos,
-                         xbilat_total_pos, mGrossOutputTotalShock, mAllPriceShock, mMigrationShock]
+            lData     = list(results)
 
         Support.write_data_excel(sDirectoryOutput, sFileName, lSheet, lData)
+        return results
     else:
         if nCenario == 0:
             vSheet    = ['VABrasil', 'w_Brasil', 'P_Brasil', 'Y', 'cresc_trab', 'PBr', 'xbilat_total', 'GO_total',
                          'p_total', 'migr']
-            VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre, xbilat_total_pre, \
-            mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm = \
-                Support.read_data_excel(sDirectoryOutput, "ResultsOfNormalScenario.xlsx", vSheet)
+            return Support.read_data_excel(sDirectoryOutput, "ResultsOfNormalScenario.xlsx", vSheet)
         else:
             vSheet    = ['VABrasil_C', 'w_Brasil_C', 'P_Brasil_C', 'Y_C', 'cresc_trab_C', 'PBr_C', 'xbilat_total_C',
                          'GO_total_C', 'p_total_C', 'migr_C']
-            VABrasil_pos, w_Brasil_pos, mPricesBrazilShock, mYShock, mGrowthLaborShock, PBr_pos, xbilat_total_pos, \
-            mGrossOutputTotalShock, mAllPriceShock, mMigrationShock = \
-                Support.read_data_excel(sDirectoryOutput, "ResultsOfCounterfactualScenario.xlsx", vSheet)
+            return Support.read_data_excel(sDirectoryOutput, "ResultsOfCounterfactualScenario.xlsx", vSheet)
+
+if parallel:
+    p = Pool(2)
+    normal_res = p.apply_async(run_scenario, (0,))
+    shock_res = p.apply_async(run_scenario, (1,))
+    VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre, xbilat_total_pre, \
+        mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm = normal_res.get(timeout=None)
+    VABrasil_pos, w_Brasil_pos, mPricesBrazilShock, mYShock, mGrowthLaborShock, PBr_pos, xbilat_total_pos, \
+        mGrossOutputTotalShock, mAllPriceShock, mMigrationShock = shock_res.get(timeout=None)
+    p.close()
+else:
+    VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre, xbilat_total_pre, \
+        mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm = run_scenario(0)
+    VABrasil_pos, w_Brasil_pos, mPricesBrazilShock, mYShock, mGrowthLaborShock, PBr_pos, xbilat_total_pos, \
+        mGrossOutputTotalShock, mAllPriceShock, mMigrationShock = run_scenario(1)
 
 print("+++++++++++++++++++++++++++++++++++++++++++++")
 print("Treatment of data for presentation of results")
@@ -678,4 +689,3 @@ vSheetName.append('AjustePO')
 Support.write_data_excel(sDirectoryOutput, "ResultsOfModel.xlsx", vSheetName, vDataSheet)
 
 print("End")
-sys.exit(0)
