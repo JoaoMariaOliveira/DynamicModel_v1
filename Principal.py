@@ -1,3 +1,11 @@
+# Profiling code (temporary, just to help with optimization)
+import builtins
+try:
+    builtins.profile
+except AttributeError:
+    def profile(fn): return fn
+    builtins.profile = profile
+
 # ============================================================================================
 # Main Module of Dynamic Computable General Equilibrium Model
 # ported to Python by João Maria de Oliveira -
@@ -41,8 +49,8 @@ nStart = [0, 0]
 nFactor = -0.1
 # tolerance value for convergence
 #nTolerance = 1E-08
-# nTolerance = 1E-04
-nTolerance = 1E-03
+nTolerance = 1E-04
+# nTolerance = 1E-05
 # Maximum number of iterations
 nMaxIteration = 400000000
 nAdjust = 1
@@ -57,8 +65,8 @@ nTradebleSectors = 42
 nCountries = 27
 M = 27
 # Number of years in the model (T)
-# nYears = 20
-nYears = 2
+nYears = 20
+# nYears = 2
 # Number of Sectors with unemployment
 nSectorsLabor = nSectors+1
 # Position of Brasil in matrices (arrays)
@@ -174,7 +182,6 @@ p_pos[0, :] = mPricesBrazilShock[0, :]
 for t in range(1,nYears):
     for j in range(nSectors):
         p_pre[t, j] = mPricesBrazilNorm[t, j] * p_pre[t - 1, j]
-
         p_pos[t, j] = mPricesBrazilShock[t, j] * p_pos[t - 1, j]
 
 Crescimento_Preco = (p_pos / p_pre - 1) * 100
