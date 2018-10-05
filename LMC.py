@@ -7,6 +7,7 @@
 #
 import numpy as np
 
+@profile
 def LMC(Xp, mTradeShareOM, nSectors, nCountries, mShareVA, VAL, VA_Br, nPositionBR, LG):
     PQ_vec = Xp.T.reshape(nSectors * nCountries, 1, order='F').copy()
     # Check if mTradeShareAux gives a different value
