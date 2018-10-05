@@ -14,20 +14,30 @@ cdef double absmax(double[:,::1] mat):
     cdef double mx = 0
     cdef double tmp;
     cdef Py_ssize_t x, y
-
     for x in range(x_max):
         for y in range(y_max):
             tmp = fabs(mat[x,y])
             if tmp > mx: mx = tmp
     return mx
 
-def ExpenditureAux(double[:, :] OM, double[:, :] Soma, np.ndarray[DTYPE_t, ndim=2] PQ):
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def ExpenditureAux(double[:, ::1] OM, double[:, ::1] Soma, np.ndarray[DTYPE_t, ndim=2] PQ):
     cdef np.ndarray[DTYPE_t, ndim=2] Dif
     cdef double PQmax = 1.
+    cdef double tmp, tmp_mx;
+    cdef Py_ssize_t x_max = PQ.shape[0]
+    cdef Py_ssize_t x
     while PQmax > 1E-03:
-        Dif = np.dot(OM, PQ) - Soma
-        PQmax = absmax(Dif)
-        PQ = PQ - Dif
+        tmp_mx = 0
+        Dif = np.dot(OM, PQ)
+        for x in range(x_max):
+            tmp = Dif[x, 0] - Soma[x, 0]
+            PQ[x, 0] -= tmp
+            tmp = fabs(tmp)
+            if tmp > tmp_mx: tmp_mx = tmp
+        PQmax = tmp_mx
     return PQ
 
 
@@ -73,7 +83,7 @@ def PH_F(mWages, mTauHat, mLinearThetas, mThetas, mShareVA, G, Din, Py_ssize_t n
 @cython.wraparound(False)
 cdef PHf(double[:,::1] Din_om, double[:,::1] mCost, np.ndarray[DTYPE_t, ndim=1] mThetas, Py_ssize_t nSectors, Py_ssize_t nCountries):
     cdef np.ndarray[DTYPE_t, ndim=2] mPriceHat = np.zeros([nSectors, nCountries], dtype=float)
-    cdef double[:,:] mPriceHatView = mPriceHat
+    cdef double[:,::1] mPriceHatView = mPriceHat
     cdef double[:] powers = -1/mThetas
     cdef Py_ssize_t j, n
     for j in range(nSectors):
@@ -104,3 +114,30 @@ def OM_sum_f(double[:,::1] GG, double[:,::1] NNBP, double[:,::1] IA, Py_ssize_t 
         for j in range(size):
             OM_view[i, j] = I_view[i,j] - ((GG[i,j] * NNBP[i,j]) + IA[i,j])
     return OM
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def compute_IA(mWeightedTariffs, mAlphas, Py_ssize_t nSectors, Py_ssize_t nCountries):
+    cdef np.ndarray[DTYPE_t, ndim=2] IA = np.zeros([nSectors * nCountries, nSectors * nCountries], dtype=float)
+    cdef Py_ssize_t n
+    I_F = 1 - mWeightedTariffs
+
+    for n in range(nCountries):
+        IA[n * nSectors : (n + 1) * nSectors, n * nSectors: (n + 1) * nSectors] =  np.kron(mAlphas[:, n], (I_F[:, n].T)).reshape(nSectors, nSectors)
+    return IA
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def compute_NBP(Pit, Bt, Py_ssize_t nSectors, Py_ssize_t nCountries):
+    cdef np.ndarray[DTYPE_t, ndim=2] BP = np.zeros([nSectors * nCountries, nCountries], dtype=float)
+    cdef np.ndarray[DTYPE_t, ndim=2] NBP = np.zeros([nCountries, nSectors * nCountries], dtype=float)
+    cdef Py_ssize_t j
+
+    for j in range(nSectors):
+        BP[j * nCountries: (j + 1) * nCountries, :] = np.kron(np.ones(nCountries).reshape(nCountries, 1), Bt[j, :]) * Pit[j * nCountries: (j + 1) * nCountries, :]
+
+    for j in range(nCountries):
+        for n in range(nCountries):
+            NBP[j, n * nSectors: (n + 1) * nSectors] = BP[n: nSectors * nCountries: nCountries, j]
+    return NBP
+
