@@ -26,9 +26,11 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
         # Calculating trade shares
         mTradeShare = Dinprime(Din, mTauHat, mCost, mLinearThetas, mThetas, nSectors, nCountries)
         mTradeShareOM = mTradeShare / mTauActual
-        mWeightedTariffs = np.zeros([nSectors, nCountries], dtype=float)
-        for j in range(nSectors):
-            mWeightedTariffs[j, :] = sum((mTradeShare[j * nCountries: (j + 1) * nCountries: 1, :] / mTauActual[j * nCountries: (j + 1) * nCountries: 1, :]).T)
+        idxs = np.arange(0, nCountries) + (np.arange(nSectors) * nCountries)[:,None]
+        mWeightedTariffs = np.sum((mTradeShare[idxs,:]/mTauActual[idxs,:]).T, axis=0).T
+        # mWeightedTariffs_old = np.zeros([nSectors, nCountries], dtype=float)
+        # for j in range(nSectors):
+        #     mWeightedTariffs_old[j, :] = sum((mTradeShare[j * nCountries: (j + 1) * nCountries: 1, :] / mTauActual[j * nCountries: (j + 1) * nCountries: 1, :]).T)
 
         # Expenditure matrix
         PQ = Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
@@ -51,7 +53,7 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
         PF = PQ * mWeightedTariffs
         # Imports
         RHS = sum(PF).reshape(nCountries, 1)
-        Sn_pos = -(RHS - LHS)
+        # Sn_pos = -(RHS - LHS)
         xbilattau = (PQ_vec * np.ones([1, nCountries], dtype=float)) * mTradeShareOM
         GO = np.ones([nSectors, nCountries], dtype=float)
         for j in range(nSectors):

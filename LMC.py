@@ -18,7 +18,6 @@ def LMC(Xp, mTradeShareOM, nSectors, nCountries, mShareVA, VAL, VA_Br, nPosition
     #     mTradeShareAux_old[:, n] = mTradeShareOM[:, n] * PQ_vec[:, 0]
     # assert np.array_equal(mTradeShareAux, mTradeShareAux_old)
 
-
     mTradeShareIdxs = np.arange(0, nCountries) + (np.arange(nSectors) * nCountries)[:,None]
     mTradeShareTemp = np.sum(mTradeShareAux[mTradeShareIdxs,:], axis=1)
     # mTradeShareTemp_old = np.zeros((nSectors, nCountries))
