@@ -201,18 +201,34 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
             # pf0_all = mPriceFactor./(mAlphas);
             P = np.prod(mPriceFactor ** mAlphas, axis=0)
             PBr[nActualYear, 0] = P[nPositionBR]
-            for j in range(nSectors):
-                for n in range(nCountries):
-                    xbilatp[n + j * nCountries, n] = 0
+            # xbilatp_old = xbilatp.copy()
+            # for j in range(nSectors):
+            #     for n in range(nCountries):
+            #         xbilatp_old[n + j * nCountries, n] = 0
+            sidx = np.arange(nSectors)
+            cidx = np.arange(nCountries)
+            xbilatp[cidx + sidx[:,None] * nCountries, cidx] = 0
+            # assert np.array_equal(xbilatp, xbilatp_old)
 
-            for i in range(nCountries * nSectors):
-                for n in range(nCountries):
-                    xbilat_total[nActualYear * nCountries * nSectors + i, n] = xbilatp[i, n]
 
-            for j in range(nSectors):
-                for n in range(nCountries):
-                    mGrossOutputTotal[nActualYear * nSectors + j, n] = mGrossOutput[j, n]
-                    mAllPrice[nActualYear * nSectors + j, n] = mPriceFactor[j, n]
+            # xbilat_total_old = xbilat_total.copy()
+            # for i in range(nCountries * nSectors):
+            #     for n in range(nCountries):
+            #         xbilat_total_old[nActualYear * nCountries * nSectors + i, n] = xbilatp[i, n]
+            n = nCountries * nSectors
+            xbilat_total[nActualYear*n:(nActualYear+1)*n] = xbilatp
+            # assert np.array_equal(xbilat_total, xbilat_total_old)
+
+            # mGrossOutputTotal_old = mGrossOutputTotal.copy()
+            # mAllPrice_old = mAllPrice.copy()
+            # for j in range(nSectors):
+            #     for n in range(nCountries):
+            #         mGrossOutputTotal_old[nActualYear * nSectors + j, n] = mGrossOutput[j, n]
+            #         mAllPrice_old[nActualYear * nSectors + j, n] = mPriceFactor[j, n]
+            mGrossOutputTotal[nActualYear*nSectors:(nActualYear+1)*nSectors] = mGrossOutput
+            mAllPrice[nActualYear*nSectors:(nActualYear+1)*nSectors] = mPriceFactor
+            # assert np.array_equal(mGrossOutputTotal, mGrossOutputTotal_old)
+            # assert np.array_equal(mAllPrice, mAllPrice_old)
 
             print("End    : ", time.strftime("%d/%b/%Y - %H:%M:%S", time.localtime()))
             TFim = time.perf_counter()

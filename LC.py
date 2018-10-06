@@ -31,6 +31,7 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
         # mWeightedTariffs_old = np.zeros([nSectors, nCountries], dtype=float)
         # for j in range(nSectors):
         #     mWeightedTariffs_old[j, :] = sum((mTradeShare[j * nCountries: (j + 1) * nCountries: 1, :] / mTauActual[j * nCountries: (j + 1) * nCountries: 1, :]).T)
+        # assert np.array_equal(mWeightedTariffs, mWeightedTarrifs_old)
 
         # Expenditure matrix
         PQ = Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
@@ -43,9 +44,11 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
         # ZW_Br = sum(abs(mWagesBrasil - mWagesBrasilAux))
         ZW = (mWagesBrasilAux - mWagesBrasil)
         PQ_vec = PQ.T.reshape(nSectors * nCountries, 1, order='F').copy()
-        DP = np.zeros([nSectors * nCountries, nCountries], dtype=float)
-        for n in range(nCountries):
-            DP[:, n] = mTradeShareOM[:, n] * PQ_vec [:, 0]
+        DP = mTradeShareOM * PQ_vec
+        # DP_old = np.zeros([nSectors * nCountries, nCountries], dtype=float)
+        # for n in range(nCountries):
+        #     DP_old[:, n] = mTradeShareOM[:, n] * PQ_vec[:, 0]
+        # assert np.array_equal(DP, DP_old)
 
         # Exports
         LHS = sum(DP).reshape(nCountries, 1)
@@ -55,9 +58,12 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
         RHS = sum(PF).reshape(nCountries, 1)
         # Sn_pos = -(RHS - LHS)
         xbilattau = (PQ_vec * np.ones([1, nCountries], dtype=float)) * mTradeShareOM
-        GO = np.ones([nSectors, nCountries], dtype=float)
-        for j in range(nSectors):
-            GO[j, :] = sum(xbilattau[j * nCountries: (j + 1) * nCountries, :])
+        idxs = np.arange(0, nCountries) + (np.arange(nSectors) * nCountries)[:,None]
+        GO = np.sum(xbilattau[idxs,:], axis=1)
+        # GO_old = np.ones([nSectors, nCountries], dtype=float)
+        # for j in range(nSectors):
+        #     GO_old[j, :] = sum(xbilattau[j * nCountries: (j + 1) * nCountries, :])
+        # assert np.array_equal(GO, GO_old)
 
         VAjn_pos = GO * mShareVA
         Cap_pos = VAjn_pos * Csi_teste
