@@ -7,10 +7,7 @@ import numpy as np
 def Labor(Y, N, J, D, T, beta, migracao, L):
     Ybeta = Y ** beta
     Migr0 = np.ones([(T+1) * D, D],dtype=float)
-
-    for i in range(D):
-        for d in range(D):
-            Migr0[i, d] = migracao[i, d]
+    Migr0[:D, :D] = migracao
 
     AuxMigrSum = 0
     AuxMigr = np.ones([(T+1) * D, D], dtype=float)
@@ -34,9 +31,11 @@ def Labor(Y, N, J, D, T, beta, migracao, L):
                 AuxMigr[i,0]  = Migr0[(t+1)*D+i,d]
             Distr0[t+1,d] = sum(DistrAux*AuxMigr)
 
-    CrescTrab = np.ones([T, D], dtype=float)
-    for t in range(T):
-        for d in range(D):
-            CrescTrab[t,d] = Distr0[t+1,d] / Distr0[t,d]
+    CrescTrab = Distr0[1:]/Distr0[:-1]
+    # CrescTrab_old = np.ones([T, D], dtype=float)
+    # for t in range(T):
+    #     for d in range(D):
+    #         CrescTrab_old[t,d] = Distr0[t+1,d] / Distr0[t,d]
+    # np.array_equal(CrescTrab, CrescTrab_old)
 
     return CrescTrab, Migr0
