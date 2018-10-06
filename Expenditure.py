@@ -44,7 +44,7 @@ def OM_sum(GG, NNBP, IA, nSectors, nCountries):
 
 @profile
 def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
-                LG, VA_Br, mWagesBrasil, nPositionBR, PQ):
+                LG, VA_Br, mWagesBrasil, nPositionBR, PQ, tolerance):
 
     IA = compute_IA(mWeightedTariffs, mAlphas, nSectors, nCountries)
 
@@ -75,7 +75,7 @@ def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariff
     PQ_vec = PQ.T.reshape(nSectors * nCountries, 1, order='F')
 
     Soma = Vb + Bb
-    PQ = ExpenditureAux(OM, Soma, PQ_vec)
+    PQ = ExpenditureAux(OM, Soma, PQ_vec, tolerance)
 
     #temp = matrix_power(OM, -1)
     #DD1 = temp.dot(Vb)

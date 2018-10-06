@@ -5,6 +5,7 @@ import numpy as np
 # ============================================================================================
 @profile
 def Labor(Y, N, J, D, T, beta, migracao, L):
+    import ipdb; ipdb.set_trace()
     Ybeta = Y ** beta
     Migr0 = np.ones([(T+1) * D, D],dtype=float)
     Migr0[:D, :D] = migracao
@@ -35,14 +36,10 @@ def Labor(Y, N, J, D, T, beta, migracao, L):
 
     del AuxMigr, AuxMigrSum
     Distr0   = np.vstack((L,np.ones([T, D], dtype=float)))
-    DistrAux = np.ones([D,1], dtype=float)
-    AuxMigr  = np.ones([D,1], dtype=float)
     idx = np.arange(D)
     for t in range(T):
         for d in range(D):
-            DistrAux[:,0] = Distr0[t,:]
-            AuxMigr[:,0]  = Migr0[(t+1)*D+idx,d]
-            Distr0[t+1,d] = sum(DistrAux*AuxMigr)
+            Distr0[t+1,d] = sum(Distr0[t,:]*Migr0[(t+1)*D+idx,d])
 
     # Distr0_old   = np.vstack((L,np.ones([T, D], dtype=float)))
     # DistrAux_old = np.ones([D,1], dtype=float)

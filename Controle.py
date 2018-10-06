@@ -3,9 +3,9 @@
 # ported to Python by João Maria at 26/4/2018
 # ============================================================================================
 import numpy as np
-from Labor import Labor
 import SupportFunctions as Support
 from LC import equilibrium_LC
+from cfuncs import Labor
 import time
 
 @profile

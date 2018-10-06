@@ -6,7 +6,7 @@ import numpy as np
 from LMC import LMC
 from Dinprime import Dinprime
 from Expenditure import Expenditure
-from PH import PH
+from cfuncs import PH
 
 @profile
 def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareVA, mIO, Din, nSectors, nCountries,
@@ -35,7 +35,7 @@ def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareV
 
         # Expenditure matrix
         PQ = Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
-                         LG, VA_Br, mWagesBrasil, nPositionBR, PQ)
+                         LG, VA_Br, mWagesBrasil, nPositionBR, PQ, nTolerance)
         # Iterating using LMC
         mWagesAux, mWagesBrasilAux = LMC(PQ, mTradeShareOM, nSectors, nCountries, mShareVA, VAn, VA_Br, nPositionBR, LG)
         # Excess function
