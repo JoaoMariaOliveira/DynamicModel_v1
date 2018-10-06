@@ -5,8 +5,7 @@
 import numpy as np
 from LMC import LMC
 from Dinprime import Dinprime
-from Expenditure import Expenditure
-from cfuncs import PH
+from cfuncs import PH, Expenditure
 
 @profile
 def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareVA, mIO, Din, nSectors, nCountries,

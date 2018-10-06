@@ -12,37 +12,6 @@ def kron(a, nrows):
 import numpy as np
 from cfuncs import ExpenditureAux, OM_sum_f, compute_IA, compute_NBP
 
-def OM_sum(GG, NNBP, IA, nSectors, nCountries):
-    GP = GG * NNBP
-    I = np.eye(nSectors * nCountries, nSectors * nCountries, dtype=float)
-    OM = I - (GP + IA)
-    return OM
-
-# def compute_IA(mWeightedTariffs, mAlphas, nSectors, nCountries):
-#     IA = np.zeros([nSectors * nCountries, nSectors * nCountries], dtype=float)
-#     I_F = 1 - mWeightedTariffs
-
-#     for n in range(nCountries):
-#         IA[n * nSectors: (n + 1) * nSectors, n * nSectors: (n + 1) * nSectors] =  np.kron(mAlphas[:, n], (I_F[:, n].T)).reshape(nSectors, nSectors)
-#     return IA
-
-# def compute_NBP(mTradeShare, mTauActual, mShareVA, nSectors, nCountries):
-#     Pit = mTradeShare / mTauActual
-#     Bt = 1 - mShareVA
-#     BP = np.zeros([nSectors * nCountries, nCountries], dtype=float)
-
-#     for j in range(nSectors):
-#         BP[j * nCountries: (j + 1) * nCountries, :] = np.kron(np.ones(nCountries).reshape(nCountries, 1), Bt[j, :]) * Pit[j * nCountries: (j + 1) * nCountries, :]
-
-#     NBP = np.zeros([nCountries, nSectors * nCountries], dtype=float)
-
-#     for j in range(nCountries):
-#         for n in range(nCountries):
-#             NBP[j, n * nSectors: (n + 1) * nSectors] = BP[n: nSectors * nCountries: nCountries, j]
-#     return NBP
-
-
-@profile
 def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
                 LG, VA_Br, mWagesBrasil, nPositionBR, PQ, tolerance):
 

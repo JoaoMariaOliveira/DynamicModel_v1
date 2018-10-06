@@ -23,7 +23,7 @@ cdef double absmax(double[:,::1] mat):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def ExpenditureAux(double[:, ::1] OM, double[:, ::1] Soma, np.ndarray[DTYPE_t, ndim=2] PQ, float tolerance):
+cdef ExpenditureAux(double[:, ::1] OM, double[:, ::1] Soma, np.ndarray[DTYPE_t, ndim=2] PQ, float tolerance):
     cdef np.ndarray[DTYPE_t, ndim=2] Dif
     cdef double PQmax = 1.
     cdef double tmp, tmp_mx;
@@ -101,7 +101,7 @@ cdef PH_subroutine(double[:,::1] Din_om, double[:,::1] mCost, np.ndarray[DTYPE_t
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def OM_sum_f(double[:,::1] GG, double[:,::1] NNBP, double[:,::1] IA, Py_ssize_t nSectors, Py_ssize_t nCountries):
+cdef OM_sum_f(double[:,::1] GG, double[:,::1] NNBP, double[:,::1] IA, Py_ssize_t nSectors, Py_ssize_t nCountries):
     cdef np.ndarray[DTYPE_t, ndim=2] I = np.eye(nSectors * nCountries, nSectors * nCountries, dtype=float)
     cdef np.ndarray[DTYPE_t, ndim=2] OM = np.zeros([nSectors * nCountries, nSectors * nCountries], dtype=float)
     cdef double[:, ::1] I_view = I
@@ -118,7 +118,7 @@ def OM_sum_f(double[:,::1] GG, double[:,::1] NNBP, double[:,::1] IA, Py_ssize_t 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def compute_IA(np.ndarray[DTYPE_t, ndim=2] mWeightedTariffs, double[:, ::1] mAlphas, Py_ssize_t nSectors, Py_ssize_t nCountries):
+cdef compute_IA(np.ndarray[DTYPE_t, ndim=2] mWeightedTariffs, double[:, ::1] mAlphas, Py_ssize_t nSectors, Py_ssize_t nCountries):
     cdef np.ndarray[DTYPE_t, ndim=2] IA = np.zeros([nSectors * nCountries, nSectors * nCountries], dtype=float)
     cdef Py_ssize_t n
     I_F = 1 - mWeightedTariffs
@@ -128,7 +128,7 @@ def compute_IA(np.ndarray[DTYPE_t, ndim=2] mWeightedTariffs, double[:, ::1] mAlp
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def compute_NBP(double[:, ::1] Pit, double[:, ::1] Bt, Py_ssize_t nSectors, Py_ssize_t nCountries):
+cdef compute_NBP(double[:, ::1] Pit, double[:, ::1] Bt, Py_ssize_t nSectors, Py_ssize_t nCountries):
     cdef np.ndarray[DTYPE_t, ndim=2] BP = np.zeros([nSectors * nCountries, nCountries], dtype=float)
     cdef np.ndarray[DTYPE_t, ndim=2] NBP = np.zeros([nCountries, nSectors * nCountries], dtype=float)
     cdef Py_ssize_t j
@@ -202,3 +202,48 @@ def Labor(np.ndarray[DTYPE_t, ndim=2] Y, Py_ssize_t N, Py_ssize_t J, Py_ssize_t 
     # np.array_equal(CrescTrab, CrescTrab_old)
 
     return CrescTrab, Migr0
+
+
+def kron(a, nrows):
+    return np.repeat(a, nrows * np.ones(a.shape[0], np.int), axis=0)
+
+
+def Expenditure(mAlphas, mShareVA, mIO, mTradeShare, mTauActual, mWeightedTariffs, VAn, mWages, Sn, nSectors, nCountries,
+                LG, VA_Br, mWagesBrasil, nPositionBR, PQ, tolerance):
+
+    IA = compute_IA(mWeightedTariffs, mAlphas, nSectors, nCountries)
+
+    Pit = mTradeShare / mTauActual
+    Bt = 1 - mShareVA
+    NBP = compute_NBP(Pit, Bt, nSectors, nCountries)
+
+    NNBP = kron(NBP, nSectors)
+    # NNBP_old = np.kron(NBP, np.ones([nSectors, 1], dtype=float))
+    # assert np.array_equal(NNBP, NNBP_old)
+    GG = np.tile(mIO, nCountries)
+    # GG_old = np.kron(np.ones([1, nCountries], dtype=float), mIO)
+    # assert np.array_equal(GG, GG_old)
+    OM = OM_sum_f(GG, NNBP, IA, nSectors, nCountries)
+    # OM_old = OM_sum(GG, NNBP, IA, nSectors, nCountries)
+    # assert np.array_equal(OM, OM_old)
+
+    A = np.kron(np.ones([nSectors, 1], dtype=float), (mWages * VAn).T) #.reshape(1, N))
+    mShareVA = mWagesBrasil * LG * VA_Br
+    C = np.sum(mShareVA)
+    A[:, nPositionBR] = C
+
+    Vb = mAlphas * A
+
+    Vb = Vb.reshape(nSectors * nCountries, 1, order='F')
+    Bb = -mAlphas * (Sn * np.ones((1, nSectors))).T
+    Bb = Bb.reshape(nSectors * nCountries, 1, order='F')
+    PQ_vec = PQ.T.reshape(nSectors * nCountries, 1, order='F')
+
+    Soma = Vb + Bb
+    PQ = ExpenditureAux(OM, Soma, PQ_vec, tolerance)
+
+    #temp = matrix_power(OM, -1)
+    #DD1 = temp.dot(Vb)
+    #DD2 = temp.dot(Bb)
+    #PQ = DD1 + DD2
+    return PQ.reshape(nSectors, nCountries, order='F')
