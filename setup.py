@@ -6,7 +6,8 @@ from Cython.Build import cythonize
 ext_modules = [
     Extension(
         'cfuncs',
-        ['cfuncs.pyx']
+        ['cfuncs.pyx'],
+        extra_compile_args=['-O3', '-ffast-math'],
     ),
 ]
 
