@@ -1,0 +1,62 @@
+# sDirectoryInput - Data Entry/Input Directory
+# sDirectoryOutput - Data Output/Results Directory
+# sFileData          - Data File
+# sFileRate          - Data Rate File
+# sSheet             - Data Sheet
+sDirectoryInput: './InputCenario1FormulaSuica/'
+sDirectoryOutput: './OutputCenario1FormulaSuica/'
+
+# If scenarios should be run in parallel
+# Set to False for profiling, otherwise set to True
+parallel: True
+
+# Intertemporal Factor
+nFactor: -0.1
+
+# Tolerance value for convergence
+nTolerance: 1.e-03
+
+# Maximum number of iterations
+nMaxIteration: 400000000
+nAdjust: 1
+
+# Number of Sectors J
+nSectors: 57
+
+# Number of Tradebles  Sectors (TS)
+nTradebleSectors: 42
+
+# Number of Countries (N)
+nCountries: 27
+M: 27
+
+# Number of years in the model (T)
+nYears: 2
+
+# Position of Brasil in matrices (arrays)
+nPositionBR: 0
+
+# Calibration values
+nBeta: .9
+
+# Intertemporal value
+nValIntertemp: 8.47
+
+scenarios:
+    - name: "normal"
+      Y1_input: "Y1"
+      Y1_ant_input: "Y1_ant"
+      output: "ResultsOfNormalScenario.xlsx"
+      nExecute: 0
+      nStart: 0
+    - name: "shock"
+      Y1_input: "Y1_C"
+      Y1_ant_input: "Y1_ant_C"
+      output: "ResultsOfCounterfactualScenario.xlsx"
+      nExecute: 0
+      nStart: 0
+
+# nExecute = 0 runs model and handles data
+# nExecuta = 1  Just treats/handles data (model is already run)
+# nStart = 0 runs model  from the starting position of Y ( matrix of 1´s)
+# nStart = 1 runs model  from the last position of Y (from previously saved data in an iteration)

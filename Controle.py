@@ -10,7 +10,7 @@ import time
 
 def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp, nPositionBR,
                 mInitialMigration, mInitialLaborStock, vFactor, nMaxIterations, nTolerance, mInitialY, nAdjust,
-                mCsiBrasil, nCenario, sDirectoryInput, sDirectoryOutput):
+                mCsiBrasil, isNormal, sDirectoryInput, sDirectoryOutput):
 
     mY = mInitialY
     # Loading trade flows in files txt
@@ -24,7 +24,7 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
             = Support.read_data_txt(lRead, sDirectoryInput)
 # ============================================================================================
 # Loading data from prior run from csv files
-    if nCenario == 0:
+    if isNormal:
         lRead = ['w_aux', 'wbr_aux']
     else:
         lRead = ['w_aux_C', 'wbr_aux_C']
@@ -37,7 +37,7 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
             Labor(mY, nCountries, nSectors, nSectorsLabor, nYears, nBeta, mInitialMigration, mInitialLaborStock)
 
         mGrossOutput = np.copy(mGrossOutputOrigin)
-        if nCenario == 0:
+        if isNormal:
             mTauPrev = np.vstack((1 + mNormalTariffs / 100, np.ones([(nSectors - nTradebleSectors) * nCountries, nCountries],
                                                         dtype=float)))  # actual tariff vector
             mTauActual = np.vstack((1 + mNormalTariffs / 100, np.ones([(nSectors - nTradebleSectors) * nCountries, nCountries],
@@ -250,7 +250,7 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
         Ymax = vYmax[0, 0]
         print( "Ymax = ", Ymax)
         Y2 = mY - nAdjust * (mY - Y1)
-        if nCenario == 0:
+        if isNormal:
             lDataToSave = ['Y1', 'w_aux', 'wbr_aux', 'Y1_ant', 'YmaxV']
         else:
             lDataToSave = ['Y1_C', 'w_aux_C', 'wbr_aux_C', 'Y1_ant_C', 'YmaxV_C']
