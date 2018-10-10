@@ -7,7 +7,6 @@ from LMC import LMC
 from Dinprime import Dinprime
 from cfuncs import PH, Expenditure
 
-@profile
 def equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareVA, mIO, Din, nSectors, nCountries,
                    nMaxIteracions, nTolerance, VAn, Sn, vfactor, LG, VA_Br, nBeta, nPositionBR, nActualYear,
                    w_aux, wbr_aux, mCsiBrasil, Csi_teste, mIota):

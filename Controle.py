@@ -8,7 +8,6 @@ from LC import equilibrium_LC
 from cfuncs import Labor
 import time
 
-@profile
 def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp, nPositionBR,
                 mInitialMigration, mInitialLaborStock, vFactor, nMaxIterations, nTolerance, mInitialY, nAdjust,
                 mCsiBrasil, nCenario, sDirectoryInput, sDirectoryOutput):

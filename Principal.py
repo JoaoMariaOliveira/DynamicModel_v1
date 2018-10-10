@@ -1,11 +1,3 @@
-# Profiling code (temporary, just to help with optimization)
-import builtins
-try:
-    builtins.profile
-except AttributeError:
-    def profile(fn): return fn
-    builtins.profile = profile
-
 # ============================================================================================
 # Main Module of Dynamic Computable General Equilibrium Model
 # ported to Python by João Maria de Oliveira -
