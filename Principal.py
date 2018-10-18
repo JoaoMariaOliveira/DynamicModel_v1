@@ -69,9 +69,11 @@ def run_scenario(scenario):
                   'xbilat_total_C', 'GO_total_C', 'p_total_C', 'migr_C']
 
     if scenario['nExecute'] == 0:
+        sDirectoryInputScenario = scenario['sDirectoryInputScenario']
+        sNameScenario = scenario['name']
         results = Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp,
                                 nPositionBR, mInitialMigration, mInitialLaborStock, nFactor, nMaxIteration, nTolerance,
-                                mInitialY, nAdjust, mCsiBrasil, isNormal, sDirectoryInput, sDirectoryOutput)
+                                mInitialY, nAdjust, mCsiBrasil, isNormal, sDirectoryInputScenario, sDirectoryOutput, sNameScenario)
         sFileName = scenario['output']
         lData     = list(results)
         Support.write_data_excel(sDirectoryOutput, sFileName, lSheet, lData)

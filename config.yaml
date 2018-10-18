@@ -14,7 +14,7 @@ parallel: True
 nFactor: -0.1
 
 # Tolerance value for convergence
-nTolerance: 1.e-03
+nTolerance: 1.e-04
 
 # Maximum number of iterations
 nMaxIteration: 400000000
@@ -31,7 +31,7 @@ nCountries: 27
 M: 27
 
 # Number of years in the model (T)
-nYears: 2
+nYears: 20
 
 # Position of Brasil in matrices (arrays)
 nPositionBR: 0
@@ -49,12 +49,24 @@ scenarios:
       output: "ResultsOfNormalScenario.xlsx"
       nExecute: 0
       nStart: 0
-    - name: "shock"
+      sDirectoryInputScenario: './InputCenario1FormulaSuica/Normal/'
+    - name: "EstaticShock"
       Y1_input: "Y1_C"
       Y1_ant_input: "Y1_ant_C"
-      output: "ResultsOfCounterfactualScenario.xlsx"
+      output: "ResultsOfEstaticShockScenario.xlsx"
       nExecute: 0
       nStart: 0
+      sDirectoryInputScenario: './InputCenario1FormulaSuica/EstaticShock/'
+    - name: "DynamicShock"
+      Y1_input: "Y1_C"
+      Y1_ant_input: "Y1_ant_C"
+      output: "ResultsDynamicShockScenario.xlsx"
+      nExecute: 0
+      nStart: 0
+      sDirectoryInputScenario: './InputCenario1FormulaSuica/DynamicShock/'
+
+
+
 
 # nExecute = 0 runs model and handles data
 # nExecuta = 1  Just treats/handles data (model is already run)

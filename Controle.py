@@ -10,7 +10,7 @@ import time
 
 def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, nBeta, nValIntertemp, nPositionBR,
                 mInitialMigration, mInitialLaborStock, vFactor, nMaxIterations, nTolerance, mInitialY, nAdjust,
-                mCsiBrasil, isNormal, sDirectoryInput, sDirectoryOutput):
+                mCsiBrasil, isNormal, sDirectoryInputScenario, sDirectoryOutput, sNameScenario):
 
     mY = mInitialY
     # Loading trade flows in files txt
@@ -19,9 +19,9 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
     # IO        - Input Output Matrix
     # T (Thetas)- dispersion of productivity - non-tradables = 8.22
     #               Need Checks that dispersion of productivity
-    lRead = ['B', 'Comercio', 'Csi_total', "GO", 'IO', 'Tarifas', 'TarifasZero', 'T']
-    mShareVA, mTrade, Csi_total, mGrossOutputOrigin, mIO, mNormalTariffs, mShockTariffs, mThetasOrigin\
-            = Support.read_data_txt(lRead, sDirectoryInput)
+    lRead = ['B', 'Comercio', 'Csi_total', "GO", 'IO', 'Tarifas', 'T']
+    mShareVA, mTrade, Csi_total, mGrossOutputOrigin, mIO, mTariffs, mThetasOrigin\
+            = Support.read_data_txt(lRead, sDirectoryInputScenario)
 # ============================================================================================
 # Loading data from prior run from csv files
     if isNormal:
@@ -30,6 +30,7 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
         lRead = ['w_aux_C', 'wbr_aux_C']
 
     w_aux, wbr_aux = Support.read_data_csv(lRead, sDirectoryOutput)
+    mTau = 1 + mTariffs / 100
     nIteration = 1
     Ymax = 1
     while (nIteration <= nMaxIterations) and (Ymax > nTolerance):
@@ -37,24 +38,6 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
             Labor(mY, nCountries, nSectors, nSectorsLabor, nYears, nBeta, mInitialMigration, mInitialLaborStock)
 
         mGrossOutput = np.copy(mGrossOutputOrigin)
-        if isNormal:
-            mTauPrev = np.vstack((1 + mNormalTariffs / 100, np.ones([(nSectors - nTradebleSectors) * nCountries, nCountries],
-                                                        dtype=float)))  # actual tariff vector
-            mTauActual = np.vstack((1 + mNormalTariffs / 100, np.ones([(nSectors - nTradebleSectors) * nCountries, nCountries],
-                                                         dtype=float)))  # counterfactual tariff vector
-            print("+++++++++++++++++++++++++++++++")
-            print("Running normal scenario")
-            print("iteration ", nIteration)
-            print("+++++++++++++++++++++++++++++++")
-        else:
-            mTauPrev = np.vstack((1 + mNormalTariffs / 100, np.ones([(nSectors - nTradebleSectors) * nCountries, nCountries],
-                                                        dtype=float)))  # actual tariff vector
-            mTauActual = np.vstack((1 + mShockTariffs / 100, np.ones([(nSectors - nTradebleSectors) * nCountries, nCountries],
-                                                         dtype=float)))  # counterfactual tariff vector
-            print("+++++++++++++++++++++++++++++++")
-            print("Running counterfactual scenario")
-            print("iteration ", nIteration)
-            print("+++++++++++++++++++++++++++++++")
 
         mThetas = mThetasOrigin
         # dispersion of productivity - non-tradables = 8.22
@@ -67,6 +50,8 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
                 mLinearThetas[j * nCountries + n, :] = mThetas[j]
 
         # Calculating expenditures
+        mTauPrev  = mTau[0:nSectors*nCountries ,:]
+        mTauActual= mTau[nSectors*nCountries:2*nSectors*nCountries ,:]
         xbilat = np.vstack((mTrade, np.zeros([(nSectors - nTradebleSectors) * nCountries, nCountries]))) * mTauPrev
         # Domestic sales
         x = np.zeros([nSectors, nCountries])
@@ -152,17 +137,18 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
         # ============================================================================================
         for nActualYear in range(nYears):
 
-            print("Running for Year = ", nActualYear)
             TInicio = time.perf_counter()
-            print("Begin: ", time.strftime("%d/%b/%Y - %H:%M:%S", time.localtime()))
+            print("Running ",sNameScenario,"int = ",nIteration, " Year = ", nActualYear, "Begin: ",
+                  time.strftime("%d/%b/%Y - %H:%M:%S", time.localtime()))
             LG = np.ones([nSectors, 1], dtype=float)
             for j in range(nSectors):
                 LG[j, 0] = mGrowthLabor[nActualYear, j + 1]
 
-            if nActualYear == 0:  # First Year
-                mTauHat = mTauActual / mTauPrev
-            else:
-                mTauHat = mTauActual / mTauActual
+            if (nActualYear>0):
+                mTauPrev = mTau[nActualYear * nSectors * nCountries : (nActualYear+1) * nSectors * nCountries, :]
+                mTauActual = mTau[(nActualYear+1) * nSectors * nCountries : (nActualYear+2)* nSectors * nCountries, :]
+
+            mTauHat = mTauPrev / mTauActual
 
             mWages, mPriceFactor, PQ, mWeightedTariffs, mTradeShare, ZW, Snp2, mCost, DP, PF, mWagesBrasil \
                 = equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareVA, mIO, Din, nSectors,
@@ -229,10 +215,10 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
             # assert np.array_equal(mGrossOutputTotal, mGrossOutputTotal_old)
             # assert np.array_equal(mAllPrice, mAllPrice_old)
 
-            print("End    : ", time.strftime("%d/%b/%Y - %H:%M:%S", time.localtime()))
             TFim = time.perf_counter()
             TDecorrido = (TFim - TInicio)
-            print("Spent: %.2f segs" % TDecorrido)
+            print("Running ", sNameScenario, "int = ", nIteration, " Year = ", nActualYear, "End: ",
+                  time.strftime("%d/%b/%Y - %H:%M:%S", time.localtime()), "Spent: %.2f segs" % TDecorrido )
 
 #        Y_aux = mY
         Y_aux = np.ones([nYears, nSectorsLabor], dtype=float)
