@@ -31,7 +31,7 @@ nCountries: 27
 M: 27
 
 # Number of years in the model (T)
-nYears: 20
+nYears: 5
 
 # Position of Brasil in matrices (arrays)
 nPositionBR: 0

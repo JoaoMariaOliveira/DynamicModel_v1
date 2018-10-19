@@ -8,6 +8,7 @@ import numpy as np
 import SupportFunctions as Support
 from Controle import Equilibrium
 from multiprocessing import Pool, cpu_count
+import time
 
 conf = yaml.load(open('config.yaml', 'r'))
 
@@ -83,13 +84,31 @@ def run_scenario(scenario):
 
 
 if __name__ == '__main__':
+
+    nBeginModel = time.perf_counter()
+    sTimeBeginModel = time.localtime()
     # Assuming first scenario is normal
     normal_scenario = conf['scenarios'][0]
     counter_scenarios = conf['scenarios'][1:]
+    nNumberScenarios = len(conf['scenarios'])
+    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    print("Running Model for ", nYears, "Years to ", nSectors, " Sect. x ", nCountries, " Coun. and Tolerance = ",
+          nTolerance)
+    print(nNumberScenarios, "Scenarios : ", end=" ")
+    for i in range(nNumberScenarios):
+        if (i == 0):
+           print("Normal", end=" ")
+        else:
+            print(",", counter_scenarios[i-1]['name'], end=" ")
+
+    print(" ")
+    print("Begin at ", time.strftime("%d/%b/%Y - %H:%M:%S",sTimeBeginModel ))
+    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
     if conf['parallel']:
         # Use either max available cores,
         # or enough to cover all scenarios
-        cores = min(cpu_count(), len(conf['scenarios']))
+        cores = min(cpu_count(), nNumberScenarios)
         p = Pool(cores)
 
         normal_res = p.apply_async(run_scenario, (normal_scenario,))
@@ -98,21 +117,32 @@ if __name__ == '__main__':
         shock_res = [(scenario['name'], p.apply_async(run_scenario, (scenario,))) for scenario in counter_scenarios]
 
         VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre, xbilat_total_pre, \
-            mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm = normal_res.get(timeout=None)
+            mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm, sDirectoryInputScenarioNom, mTauNorm,\
+            mAlphasNorm  = normal_res.get(timeout=None)
         shock_res = [(name, res.get(timeout=None)) for (name, res) in shock_res]
         p.close()
     else:
         VABrasil_pre, w_Brasil_pre, mPricesBrazilNorm, mYNorm, mGrowthLaborNorm, PBr_pre, xbilat_total_pre, \
-            mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm = run_scenario(normal_scenario)
+            mGrossOutputTotalNorm, mAllPriceNorm, mMigrationNorm, sDirectoryInputScenarioNom, mTauNorm,\
+            mAlphasNorm = run_scenario(normal_scenario)
         shock_res = [(scenario['name'], run_scenario(scenario)) for scenario in counter_scenarios]
 
     # Compare normal against each counterfactual
+
+    nEndModel = time.perf_counter()
+    nElapsedTime = (nEndModel - nBeginModel)
+    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    print("Model for ", nYears, "Years to ", nSectors," Sect. x ", nCountries, " Coun. and Tolerance = ",nTolerance)
+    print("Begin at ",time.strftime("%d/%b/%Y - %H:%M:%S",sTimeBeginModel )
+          ," End at ", time.strftime("%d/%b/%Y - %H:%M:%S", time.localtime()), "Spent: %.2f segs" % nElapsedTime )
+    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
     for scenario_name, res in shock_res:
         VABrasil_pos, w_Brasil_pos, mPricesBrazilShock, mYShock, mGrowthLaborShock, PBr_pos, xbilat_total_pos, \
-            mGrossOutputTotalShock, mAllPriceShock, mMigrationShock = res
+            mGrossOutputTotalShock, mAllPriceShock, mMigrationShock, sDirectoryInputScenario, mTau, mAlphas = res
 
         print("+++++++++++++++++++++++++++++++++++++++++++++")
-        print("Treatment of data for presentation of results")
+        print("Data Treatment of Counterfactual Scenario ", scenario_name )
         print("+++++++++++++++++++++++++++++++++++++++++++++")
         # ============================================================================================
         # Treatment of data for presentation of results
@@ -215,12 +245,10 @@ if __name__ == '__main__':
         p_pos_time = np.zeros([nSectors, nCountries], dtype=float)
         tau_pre_time = np.zeros([nSectors * nCountries, nCountries], dtype=float)
         tau_pos_time = np.zeros([nSectors * nCountries, nCountries], dtype=float)
-        lRead = ['Tarifas', 'TarifasZero']
-        Tarifas, TarifasZero = Support.read_data_txt(lRead, sDirectoryInput)
-        tau = np.vstack((1 + Tarifas / 100, np.ones([15 * nCountries, nCountries], dtype=float)))
-        tau_pre = np.tile(tau, (nYears, 1))
-        tau = np.vstack((1 + TarifasZero / 100, np.ones([15 * nCountries, nCountries], dtype=float)))
-        tau_pos = np.tile(tau, (nYears, 1))
+#        tau = np.vstack((1 + Tarifas / 100, np.ones([15 * nCountries, nCountries], dtype=float)))
+#        tau_pre = np.tile(tau, (nYears, 1))
+#        tau = np.vstack((1 + TarifasZero / 100, np.ones([15 * nCountries, nCountries], dtype=float)))
+#        tau_pos = np.tile(tau, (nYears, 1))
         GO_totalaux_pre = np.zeros([nSectors, nCountries], dtype=float)
         GO_totalaux_pos = np.zeros([nSectors, nCountries], dtype=float)
         tau_pre_aux = np.zeros([nCountries * nTradebleSectors, nCountries], dtype=float)
@@ -228,22 +256,25 @@ if __name__ == '__main__':
         total_comex_pre = np.zeros([nCountries, nCountries], dtype=float)
         total_comex_pos = np.zeros([nCountries, nCountries], dtype=float)
         Cambio = np.zeros([nYears, nCountries], dtype=float)
-        for t in range(nYears):
+        for nActualYear in range(nYears):
+
             for j in range(nSectors):
                 for n in range(nCountries):
-                    GO_pre_time[j, n] = mGrossOutputTotalNorm[t * nSectors + j, n]
-                    GO_pos_time[j, n] = mGrossOutputTotalShock[t * nSectors + j, n]
-                    p_pre_time[j, n] = mAllPriceNorm[t * nSectors + j, n]
-                    p_pos_time[j, n] = mAllPriceShock[t * nSectors + j, n]
+                    GO_pre_time[j, n] = mGrossOutputTotalNorm[nActualYear * nSectors + j, n]
+                    GO_pos_time[j, n] = mGrossOutputTotalShock[nActualYear * nSectors + j, n]
+                    p_pre_time[j, n] = mAllPriceNorm[nActualYear * nSectors + j, n]
+                    p_pos_time[j, n] = mAllPriceShock[nActualYear * nSectors + j, n]
 
             export_pre = np.zeros([nSectors * nCountries, nCountries], dtype=float)
             export_pos = np.zeros([nSectors * nCountries, nCountries], dtype=float)
             for i in range(nSectors * nCountries):
-                for n in range(nCountries):
-                    export_pre[i, n] = xbilat_total_pre[t * nSectors * nCountries + i, n]
-                    export_pos[i, n] = xbilat_total_pos[t * nSectors * nCountries + i, n]
-                    tau_pre_time[i, n] = tau_pre[t * nSectors * nCountries + i, n]
-                    tau_pos_time[i, n] = tau_pos[t * nSectors * nCountries + i, n]
+                export_pre[i, :] = xbilat_total_pre[nActualYear * nSectors * nCountries + i, :]
+                export_pos[i, :] = xbilat_total_pos[nActualYear * nSectors * nCountries + i, :]
+#                    tau_pre_time[i, n] = tau_pre[nActualYear * nSectors * nCountries + i, n]
+#                    tau_pos_time[i, n] = tau_pos[nActualYear * nSectors * nCountries + i, n]
+                tau_pre_time[i, :] = mTauNorm[nActualYear * nSectors * nCountries + i, :]
+                tau_pos_time[i, :] = mTau[nActualYear * nSectors * nCountries + i, :]
+
 
             GO_aux_pre = sum(GO_pre_time)
             GO_aux_pos = sum(GO_pos_time)
@@ -300,12 +331,12 @@ if __name__ == '__main__':
             cambio_pre = p_exterior_pre / ind_p_pre
             cambio_pos = p_exterior_pos / ind_p_pos
             for n in range(nCountries):
-                Cambio[t, n] = cambio_pos[n] / cambio_pre[n]
+                Cambio[nActualYear, n] = cambio_pos[n] / cambio_pre[n]
 
         Crescimento_cambio = np.zeros([nYears, nCountries], dtype=float)
         Crescimento_cambio[0, :] = Cambio[0, :]
-        for t in range(1, nYears):
-            Crescimento_cambio[t, :] = Cambio[t, :] * Crescimento_cambio[t - 1, :]
+        for nActualYear in range(1, nYears):
+            Crescimento_cambio[nActualYear, :] = Cambio[nActualYear, :] * Crescimento_cambio[nActualYear - 1, :]
 
         vDataSheet.append(Crescimento_cambio)
         vSheetName.append('VariacaoCambial')
@@ -324,15 +355,16 @@ if __name__ == '__main__':
         cresc_export_total  = np.zeros([nYears, nCountries], dtype=float)
         export_brasil_pre_aux = np.zeros([nYears*nSectors*nTradebleSectors, nCountries], dtype=float)
         export_brasil_pos_aux = np.zeros([nYears*nSectors*nTradebleSectors, nCountries], dtype=float)
-        for t in range(nYears):
+        for nActualYear in range(nYears):
+
             export_pre = np.zeros([nSectors * nCountries, nCountries], dtype=float)
             export_pos = np.zeros([nSectors * nCountries, nCountries], dtype=float)
             for i in range(nSectors * nCountries):
                 for n in range(nCountries):
-                    export_pre[i, n] = xbilat_total_pre[t * nSectors * nCountries + i, n]
-                    export_pos[i, n] = xbilat_total_pos[t * nSectors * nCountries + i, n]
-                    tau_pre_time[i, n] = tau_pre[t * nSectors * nCountries + i, n]
-                    tau_pos_time[i, n] = tau_pos[t * nSectors * nCountries + i, n]
+                    export_pre[i, n] = xbilat_total_pre[nActualYear * nSectors * nCountries + i, n]
+                    export_pos[i, n] = xbilat_total_pos[nActualYear * nSectors * nCountries + i, n]
+                    tau_pre_time[i, n] = mTauNorm[nActualYear * nSectors * nCountries + i, n]
+                    tau_pos_time[i, n] = mTau[nActualYear * nSectors * nCountries + i, n]
 
             export_pre_aux = np.zeros([nCountries * nTradebleSectors, nCountries], dtype=float)
             export_pos_aux = np.zeros([nCountries * nTradebleSectors, nCountries], dtype=float)
@@ -357,21 +389,21 @@ if __name__ == '__main__':
                     # Exports
                     export_pos_aux[j, n] = sum(export_pos[nCountries*j:(nCountries*(j+1)), n]).T
 
-                    cresc_export[t * nSectors + j, n] = export_pos_aux[j, n] / export_pre_aux[j, n]
+                    cresc_export[nActualYear * nSectors + j, n] = export_pos_aux[j, n] / export_pre_aux[j, n]
 
-                    export_brasil_pre_aux[t * nSectors + j, n] = export_pre_aux[j, n]
-                    export_brasil_pos_aux[t * nSectors + j, n] = export_pos_aux[j, n]
+                    export_brasil_pre_aux[nActualYear * nSectors + j, n] = export_pre_aux[j, n]
+                    export_brasil_pos_aux[nActualYear * nSectors + j, n] = export_pos_aux[j, n]
 
             export_pre_soma = sum(export_pre_aux)
             export_pos_soma = sum(export_pos_aux)
             for n in range(nCountries):
-                cresc_export_total[t, n] = export_pos_soma[n] / export_pre_soma[n]
+                cresc_export_total[nActualYear, n] = export_pos_soma[n] / export_pre_soma[n]
 
-        for t in range(nYears):
+        for nActualYear in range(nYears):
             for i in range (nTradebleSectors):
-                cresc_export_brasil[t,i] = cresc_export[t*nSectors+i,nPositionBR]
-                export_brasil_pre[t,i] = export_brasil_pre_aux[t*nSectors+i,nPositionBR]
-                export_brasil_pos[t,i] = export_brasil_pos_aux[t*nSectors+i,nPositionBR]
+                cresc_export_brasil[nActualYear,i] = cresc_export[nActualYear*nSectors+i,nPositionBR]
+                export_brasil_pre[nActualYear,i] = export_brasil_pre_aux[nActualYear*nSectors+i,nPositionBR]
+                export_brasil_pos[nActualYear,i] = export_brasil_pos_aux[nActualYear*nSectors+i,nPositionBR]
 
         vDataSheet.append(cresc_export_total)
         vSheetName.append('CrescExportTotal')
@@ -414,8 +446,8 @@ if __name__ == '__main__':
             for n in range(nCountries):
                 export_pre[i, n] = xbilat_total_pre[(nYears-2)* nSectors * nCountries + i, n]
                 export_pos[i, n] = xbilat_total_pos[(nYears-2) * nSectors * nCountries + i, n]
-                tau_pre_time[i, n] = tau_pre[(nYears-2) * nSectors * nCountries + i, n]
-                tau_pos_time[i, n] = tau_pos[(nYears-2) * nSectors * nCountries + i, n]
+                tau_pre_time[i, n] = mTauNorm[(nYears-2) * nSectors * nCountries + i, n]
+                tau_pos_time[i, n] = mTau[(nYears-2) * nSectors * nCountries + i, n]
 
         export_pre_aux = np.zeros([nCountries * nTradebleSectors, nCountries], dtype=float)
         export_pos_aux = np.zeros([nCountries * nTradebleSectors, nCountries], dtype=float)
@@ -586,8 +618,7 @@ if __name__ == '__main__':
                 p_pre[t, j] = mPricesBrazilNorm[t, j] * p_pre[t - 1, j]
                 p_pos[t, j] = mPricesBrazilShock[t, j] * p_pos[t - 1, j]
 
-        alphas = Support.read_file_txt('Alphas', sDirectoryInput)
-        alphas_aux = alphas.T.reshape(nCountries, nSectors)
+        alphas_aux = mAlphas.T.reshape(nCountries, nSectors)
 
         for t in range(nYears):
             P_agricultura_pre[t] = np.prod(p_pre[t, 0:14] ** (alphas_aux[nPositionBR, 0:14]), axis=0)

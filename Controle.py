@@ -34,6 +34,11 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
     nIteration = 1
     Ymax = 1
     while (nIteration <= nMaxIterations) and (Ymax > nTolerance):
+
+        nBeginInteration = time.perf_counter()
+        nTimeBeginInteration = time.localtime()
+        print("Running ", sNameScenario, "int = ", nIteration)
+
         mGrowthLabor, mMigration = \
             Labor(mY, nCountries, nSectors, nSectorsLabor, nYears, nBeta, mInitialMigration, mInitialLaborStock)
 
@@ -137,9 +142,6 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
         # ============================================================================================
         for nActualYear in range(nYears):
 
-            TInicio = time.perf_counter()
-            print("Running ",sNameScenario,"int = ",nIteration, " Year = ", nActualYear, "Begin: ",
-                  time.strftime("%d/%b/%Y - %H:%M:%S", time.localtime()))
             LG = np.ones([nSectors, 1], dtype=float)
             for j in range(nSectors):
                 LG[j, 0] = mGrowthLabor[nActualYear, j + 1]
@@ -148,7 +150,7 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
                 mTauPrev = mTau[nActualYear * nSectors * nCountries : (nActualYear+1) * nSectors * nCountries, :]
                 mTauActual = mTau[(nActualYear+1) * nSectors * nCountries : (nActualYear+2)* nSectors * nCountries, :]
 
-            mTauHat = mTauPrev / mTauActual
+            mTauHat =  mTauActual / mTauPrev
 
             mWages, mPriceFactor, PQ, mWeightedTariffs, mTradeShare, ZW, Snp2, mCost, DP, PF, mWagesBrasil \
                 = equilibrium_LC(mTauHat, mTauActual, mAlphas, mLinearThetas, mThetas, mShareVA, mIO, Din, nSectors,
@@ -215,11 +217,6 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
             # assert np.array_equal(mGrossOutputTotal, mGrossOutputTotal_old)
             # assert np.array_equal(mAllPrice, mAllPrice_old)
 
-            TFim = time.perf_counter()
-            TDecorrido = (TFim - TInicio)
-            print("Running ", sNameScenario, "int = ", nIteration, " Year = ", nActualYear, "End: ",
-                  time.strftime("%d/%b/%Y - %H:%M:%S", time.localtime()), "Spent: %.2f segs" % TDecorrido )
-
 #        Y_aux = mY
         Y_aux = np.ones([nYears, nSectorsLabor], dtype=float)
         for i in range(nYears - 1, 0, -1):
@@ -234,7 +231,15 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
         vYmax = np.zeros([1, 1], dtype=float)
         vYmax[0, 0] = sum(Y_aux2.T)
         Ymax = vYmax[0, 0]
-        print( "Ymax = ", Ymax)
+
+        nEndInteration = time.perf_counter()
+        nElapsedTimeInteration = (nEndInteration - nBeginInteration)
+        nTimeEndinteration = time.localtime()
+
+        print("End ", sNameScenario, "int = ", nIteration, " between ", time.strftime("%d/%b/%Y - %H:%M:%S", nTimeBeginInteration),
+              " and ", time.strftime("%d/%b/%Y - %H:%M:%S", nTimeEndinteration ), " Spent: %.2f segs " % nElapsedTimeInteration,
+              " Ymax = ", Ymax )
+
         Y2 = mY - nAdjust * (mY - Y1)
         if isNormal:
             lDataToSave = ['Y1', 'w_aux', 'wbr_aux', 'Y1_ant', 'YmaxV']
@@ -246,4 +251,5 @@ def Equilibrium(nCountries, nSectors, nTradebleSectors, nSectorsLabor, nYears, n
         mY = Y2
         nIteration +=1
 
-    return VABrasil, w_Brasil, P_Brasil, mY, mGrowthLabor, PBr, xbilat_total, mGrossOutputTotal, mAllPrice, mMigration
+    return VABrasil, w_Brasil, P_Brasil, mY, mGrowthLabor, PBr, xbilat_total, mGrossOutputTotal, mAllPrice, mMigration,\
+           sDirectoryInputScenario, mTau, mAlphas
